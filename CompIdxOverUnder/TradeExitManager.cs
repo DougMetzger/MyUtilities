@@ -124,50 +124,9 @@ namespace CompIdxOverUnderDriver
             if (enableDebugLogging)
                 WLLogger.Write($"Total closed: {openPositions.Count} at index {index + 1}");
         }
-        private void CloseOnePosition(string reason, int index, List<Position> openPositions) 
-        {         
-
-            if (openPositions.Count > 0)   
-            {
-                //Taking Profits = FIFO
-                this.closePosition(openPositions[0], OrderType.Market, 0, reason); //Subtle: Closing first open position 
-
-                if (enableDebugLogging)
-                    WLLogger.Write($"Closed One Pos {reason}: {index + 1}");
-            }
-
-            if (enableDebugLogging)
-                WLLogger.Write($"Total closed: {(openPositions.Count > 0 ? 1 : 0)} at index {index + 1}");
-        }
-
- /*       private void CloseStopLoss(string reason, int index, BarHistory bars)
-        {
-            var positions = getOpenPositions().ToList();
-            var losingPos = positions
-           .Where(p => GetUnrealizedProfitPct(p, bars.Close[index]) < 0)
-           .OrderBy(p => GetUnrealizedProfitPct(p, bars.Close[index]))
-           .FirstOrDefault();
-
-
-            if (losingPos != null)
-            {
-                closePosition(losingPos, OrderType.Market, 0, "StopLoss triggered");
-
-                if (enableDebugLogging)
-                 WLLogger.Write($"Closed Pos {reason}: {index + 1}");
-               //  WLLogger.Write($"Closed losing position: {losingPos.Symbol} @ {bars.Close[index]}");
-            }
-
-        }*/
-
-        private static double GetUnrealizedProfitPct(Position p, double currentPrice)
-        {
-            return (currentPrice - p.EntryPrice) / p.EntryPrice;
-        }
 
         private void CheckForStopLoss(BarHistory bars, string reason, int index, List<Position> openPositions)
-        {             
-                    
+        {         
             foreach (var pos in openPositions)
             {
                 highAmt = pos.EntryPrice;
@@ -179,7 +138,6 @@ namespace CompIdxOverUnderDriver
                     {
                         highAmt = bars.Close[currentOpenPosIdx];
                     }
-
                     currentOpenPosIdx++;
                 }
 

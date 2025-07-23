@@ -54,12 +54,12 @@ namespace CompIdxOverUnderDriver
                 {
                     double pctDiff = Math.Abs(smaVolShort[bar] - smaVolLong[bar]) / smaVolLong[bar];
                     volSpikeFlags[bar] = pctDiff > (thresholdPct / 100.0);
-
-                    // Optional detailed logging
-                    /*
-                    WLLogger.Write($"Symbol: {bars.Symbol} Bar: {bar} SMA Short: {smaVolShort[bar]:F3}, " +
+                                       
+                    if (enableDebugLogging)
+                    {             
+                        WLLogger.Write($"Symbol: {bars.Symbol} Bar: {bar} SMA Short: {smaVolShort[bar]:F3}, " +
                                    $"SMA Long: {smaVolLong[bar]:F3}, Diff%: {pctDiff:F3}, Flag: {volSpikeFlags[bar]}");
-                    */
+                    }
                 }
             }
 

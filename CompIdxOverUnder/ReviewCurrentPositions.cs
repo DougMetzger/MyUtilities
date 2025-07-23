@@ -8,13 +8,10 @@ namespace CompIdxOverUnderDriver
 {
     public class ReviewCurrentPosition
     {
-       
+        public bool OverBoughtPositionExists { get; private set; }
+        public bool MidpointPositionExists { get; private set; }
+        public bool OverSoldPositionExists { get; private set; }
 
-        public bool OverBoughtPositionExists { get; set; }
-        public bool MidpointPositionExists { get; set; }
-        public bool OverSoldPositionExists { get; set; }
-
-        #pragma warning disable IDE0290
         private readonly bool enableDebugLogging;
 
         public ReviewCurrentPosition(bool enableDebugLogging)
@@ -22,14 +19,17 @@ namespace CompIdxOverUnderDriver
             this.enableDebugLogging = enableDebugLogging;
         }
 
-        public void Analyze()
+        public void Analyze(Func<string, bool> positionChecker)
         {
+            OverSoldPositionExists = positionChecker("Buy @ OverSold");
+            OverBoughtPositionExists = positionChecker("Buy @ OverBought");
+            MidpointPositionExists = positionChecker("Buy @ MidPoint");
+
             if (enableDebugLogging)
             {
-                WLLogger.Write("Review Current Positions to determe if Oversold, Overbought, Midpoint positions exist.  Only allow one of each at a time.");
+                WLLogger.Write("Reviewing current positions: OverSold, OverBought, Midpoint.");
+                WLLogger.Write($"Oversold: {OverSoldPositionExists}, Overbought: {OverBoughtPositionExists}, Midpoint: {MidpointPositionExists}");
             }
-
-            // Your logic here...
         }
     }
 }

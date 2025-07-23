@@ -165,21 +165,17 @@ namespace CompIdxOverUnderDriver
             // Draw an upward arrow in Volume Pane if volume spike occures. 
             DrawVolumeSpikeMarker(idx);
 
-  /*          if (idx >= Math.Max(numBarsVolShort, numBarsVolLong))
-            {
-                if (volSpikeFlags[idx] == true)
-                {
-                    DrawText("↑", idx, indicatorManager.SmaVolShort[idx], WLColor.Blue, 30, "Volume Spikes");
-                }
-            }     */       
+            /*          if (idx >= Math.Max(numBarsVolShort, numBarsVolLong))
+                      {
+                          if (volSpikeFlags[idx] == true)
+                          {
+                              DrawText("↑", idx, indicatorManager.SmaVolShort[idx], WLColor.Blue, 30, "Volume Spikes");
+                          }
+                      }     */
 
-            // Determine what trades already exist for symbol 
+            // Determine what trades already exist for symbol at three locations: crossover Oversold, crossover Midpoint, crossover OverBought.  Only allow one trade per location.
             var review = new ReviewCurrentPosition(enableDebugLogging);
-            review.Analyze(); // If degugging enabled, this will write to the debug log, "Review Current Positions to determe if Oversold, Overbought, Midpoint positions exist.  Only allow one of each at a time."
-            review.OverSoldPositionExists   = HasOpenPosition("Buy @ OverSold");   
-            review.OverBoughtPositionExists = HasOpenPosition("Buy @ OverBought");        
-            review.MidpointPositionExists   = HasOpenPosition("Buy @ MidPoint");
-            
+            review.Analyze(HasOpenPosition); // Pass the method reference in
 
             // Determine if Trade Violation
             dateStr = bars.DateTimes[idx].ToString("MM-dd-yyyy");
@@ -221,8 +217,6 @@ namespace CompIdxOverUnderDriver
                                                        overBoughtLevel,
                                                        sellAtStopLossPct,
                                                        sellAtProfitPct,
-                                                     //  issueStopLoss,
-                                                     //  takeProfit,
                                                        () => OpenPositions,
                                                        () => LastOpenPosition,
                                                        (pos, type, qty, reason) => ClosePosition(pos, type, qty, reason)

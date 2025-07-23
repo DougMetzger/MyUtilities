@@ -17,14 +17,14 @@ namespace CompIdxOverUnderDriver
 
     public static class DivergenceHelper
     {
-        public static string DivergenceIdentifier(
-     UserStrategyBase strategy,
-     BarHistory bars,
-     int index,
-     IndicatorBase indicator,
-     double reversal,
-     string indicatorPaneTag,
-     bool enableDebugLogging)
+     public static string DivergenceIdentifier(
+                                            UserStrategyBase strategy,
+                                            BarHistory bars,
+                                            int index,
+                                            IndicatorBase indicator,
+                                            double reversal,
+                                            string indicatorPaneTag,
+                                            bool enableDebugLogging)
         {
             if (enableDebugLogging)
                 WLLogger.Write("GraphDivergences");
