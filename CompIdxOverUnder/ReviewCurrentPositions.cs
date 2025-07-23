@@ -26,7 +26,7 @@ namespace CompIdxOverUnderDriver
         {
             if (enableDebugLogging)
             {
-                WLLogger.Write("ReviewCurrentPosition: Starting analysis.");
+                WLLogger.Write("Review Current Positions to determe if Oversold, Overbought, Midpoint positions exist.  Only allow one of each at a time.");
             }
 
             // Your logic here...

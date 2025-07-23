@@ -89,8 +89,7 @@ namespace CompIdxOverUnderDriver
         private readonly double sellAtStopLoss;
         
         private readonly bool issueStopLoss = false;
-        private readonly bool takeProfit = false;
-        
+        private readonly bool takeProfit = false;      
         
         PeakTroughCalculator _ptc;
         private PeakTrough pt = null;
@@ -99,10 +98,7 @@ namespace CompIdxOverUnderDriver
         private bool bearishDivergence = false;
         private bool bullishDivergence   = false;
         string divergenceIdentifier = string.Empty;
-               
-
-        //       private StrategyParamaters config;
-
+      
         public override void Initialize(BarHistory bars)
         {
             // Load parameters from Strategy GUI
@@ -147,8 +143,6 @@ namespace CompIdxOverUnderDriver
                 WLLogger.Write($"Execute");
             }
 
-   //         GraphDivergences(bars, idx);      
-
             divergenceIdentifier = DivergenceHelper.DivergenceIdentifier(this, bars, idx, indicatorManager.CustInd, reversal, indicatorManager.CustInd.PaneTag, enableDebugLogging);
 
             if (divergenceIdentifier == "E")
@@ -165,21 +159,23 @@ namespace CompIdxOverUnderDriver
             {
                 bearishDivergence = false;
                 bullishDivergence = false;
-            }       
+            }
 
 
-            // Draw an upward arrow for volume spikes.            
-            if (idx >= Math.Max(numBarsVolShort, numBarsVolLong))
+            // Draw an upward arrow in Volume Pane if volume spike occures. 
+            DrawVolumeSpikeMarker(idx);
+
+  /*          if (idx >= Math.Max(numBarsVolShort, numBarsVolLong))
             {
                 if (volSpikeFlags[idx] == true)
                 {
                     DrawText("↑", idx, indicatorManager.SmaVolShort[idx], WLColor.Blue, 30, "Volume Spikes");
                 }
-            }            
+            }     */       
 
             // Determine what trades already exist for symbol 
             var review = new ReviewCurrentPosition(enableDebugLogging);
-            review.Analyze(); // If degugging enabled, this will write to the debug log, "Start of Analysis"
+            review.Analyze(); // If degugging enabled, this will write to the debug log, "Review Current Positions to determe if Oversold, Overbought, Midpoint positions exist.  Only allow one of each at a time."
             review.OverSoldPositionExists   = HasOpenPosition("Buy @ OverSold");   
             review.OverBoughtPositionExists = HasOpenPosition("Buy @ OverBought");        
             review.MidpointPositionExists   = HasOpenPosition("Buy @ MidPoint");
@@ -188,8 +184,6 @@ namespace CompIdxOverUnderDriver
             // Determine if Trade Violation
             dateStr = bars.DateTimes[idx].ToString("MM-dd-yyyy");
             noTradeViolation = true;           
-   //         DetermineIfTradeViolation(bars, idx);
-
             var violationCheck = new TradeViolationUtil(this, bars, idx, avoidTradingViolation, enableDebugLogging);
 
             if (!violationCheck.NoTradeViolation)
@@ -218,16 +212,7 @@ namespace CompIdxOverUnderDriver
             // If there is no open trades, exit.
             if (LastOpenPosition != null)           
             {
-  //             CheckForStopLoss(bars, idx);
-
-  //              CheckForProfitTaking(bars, idx);
-
-               
-                
-    //           WriteToDebugLog($"issueStopLoss: " + issueStopLoss);
-               
-
-                this.exitManager = new TradeExitManager(
+                 this.exitManager = new TradeExitManager(
                                                        bars,
                                                        enableDebugLogging,
                                                        bearishDivergence,
@@ -256,7 +241,6 @@ namespace CompIdxOverUnderDriver
 
             return OpenPositions.Any(p => p.EntrySignalName == entrySignalName);
         }   
-
 
         private void LoadParameters()
         {
@@ -319,8 +303,6 @@ namespace CompIdxOverUnderDriver
             DrawHeaderText("VolumeSpikes", WLColor.Coral, 17, "Volume Spikes", true);
         }
 
-       
-
         private void PlotPriceSma(BarHistory bars)
         {
             if (enableDebugLogging == true)
@@ -344,293 +326,14 @@ namespace CompIdxOverUnderDriver
             }
         }
 
-        /*       private void DrawVolumeSpikeMarker(int idx)
-               {
-
-                   if (enableDebugLogging == true)
-                   {
-                      WLLogger.Write($"DrawVolumeSpikeMarker");
-                   }
-
-                   DrawText("↑", idx, indicatorManager.SmaVolShort[idx], WLColor.Blue, 30, "Volume Spikes");
-               }  */
-
-        private void GraphDivergences(BarHistory bars, int index)
+        private void DrawVolumeSpikeMarker(int idx)
         {
             if (enableDebugLogging == true)
             {
-                WriteToDebugLog($"GraphDivergences");
+                WLLogger.Write($"DrawVolumeSpikeMarker");
             }
 
-            // Graph peaks and troughs to identify divergences
-            //
-            //create the PeakTroughCalculator for an Indicator or TimeSeries
-
-            PeakTroughReversalType reversalType = PeakTroughReversalType.Point;
-            _ptc = new PeakTroughCalculator(indicatorManager.CustInd, reversal, reversalType);  //_ptc: peak loss calculator  
-
-            //start after at least 2 peaks and 2 troughs
-            pt = _ptc.PeakTroughs[3];                                            //pt1: peakTrough 1 
-            StartIndex = pt.DetectedAtIndex;                                     //pt2: peakTrough 2 
-
-            //		PeakTrough pt = null;
-            pt2 = null;
-
-            if (_ptc.Divergence(index, bars.High, out pt, out pt2) == DivergenceType.Bearish)
-            {
-                WLColor bearClr = WLColor.Red;
-                DrawBarAnnotation(TextShape.ArrowDown, index, true, WLColor.Gold, 36);
-                DrawLine(pt.XIndex, pt.YValue, pt2.XIndex, pt2.YValue, bearClr, 4, default, indicatorManager.CustInd.PaneTag);
-                DrawLine(pt.XIndex, bars.High[pt.XIndex], pt2.XIndex, bars.High[pt2.XIndex], bearClr, 4, default, "Price");
-            }
-            else if (_ptc.Divergence(index, bars.Low, out pt, out pt2) == DivergenceType.Bullish)
-            {
-                WLColor bullClr = WLColor.Green;
-                DrawBarAnnotation(TextShape.ArrowUp, index, false, WLColor.Gold, 36);
-                DrawLine(pt.XIndex, pt.YValue, pt2.XIndex, pt2.YValue, bullClr, 4, default, indicatorManager.CustInd.PaneTag);
-                DrawLine(pt.XIndex, bars.Low[pt.XIndex], pt2.XIndex, bars.Low[pt2.XIndex], bullClr, 4, default, "Price");
-            }
-
-        }
-
-   /*     private void DetermineIfTradeViolation(BarHistory bars, int index)
-        {            
-            if (enableDebugLogging == true)
-            {
-               WLLogger.Write($"DetermineIfTradeViolation");
-            }
-            //
-            //  The following logic is necessary because WealthLab's BarsSinceLastOpen does not work for datasets (multi symbols).  
-            //
-            if (LastOpenPosition == null)
-            {
-                if (bars.Scale != HistoryScale.Weekly)
-                {
-                    Position lastClosed = GetPositions()
-                    .Where(p => !p.IsOpen)
-                    .OrderByDescending(p => p.ExitBar)
-                    .FirstOrDefault();
-
-                    if (lastClosed != null)
-                    {
-                        exitBar = lastClosed.ExitBar;
-                       WLLogger.Write("Symbol: " + bars.Symbol + " Last closed position exited at exit bar: " + exitBar + " current bar: " + index + " dated: " + dateStr);
-                        if ((index - exitBar) > avoidTradingViolation)
-                        {
-                            noTradeViolation = true;
-                            if (enableDebugLogging == true)
-                            {
-                               WLLogger.Write("Last Symbol - No Trade Violation: " + noTradeViolation + " Days since last close = " + (index - exitBar));
-                            }
-                        }
-                        else
-                        {
-                            noTradeViolation = false;
-                            if (enableDebugLogging == true)
-                            {
-                               WLLogger.Write("Last Symbol - ***** Trade Violation: ***** " + noTradeViolation + " Days since last close = " + (index - exitBar));
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (enableDebugLogging == true)
-                        {
-                           WLLogger.Write("Symbol: " + bars.Symbol + " No closed positions found for this symbol " + " on bar " + index + " dated: " + dateStr);
-                        }
-                    }
-                }
-
-                if (enableDebugLogging == true)
-                {
-                   WLLogger.Write("Symbol: " + bars.Symbol + " Weekly Processing: No Trade Violation: " + noTradeViolation + " on bar " + index + " dated: " + dateStr);
-                }
-            }
-            else
-            {
-                if (enableDebugLogging == true)
-                {
-                   WLLogger.Write("Symbol: " + bars.Symbol + " has open position(s) " + " on bar " + index + " dated: " + dateStr);
-                }
-
-            }
-
-        }*/
-
- /*       private void CheckForStopLoss(BarHistory bars, int index)
-        {
-            //
-            //  If Stop Loss is recongized on any open position, close all open position and exit.
-            //	
-
-            issueStopLoss = false;
-
-            foreach (Position openPos in OpenPositions)
-            {
-                highAmt = openPos.EntryPrice;
-                currentOpenPosIdx = openPos.EntryBar;
-
-                while (currentOpenPosIdx <= (index))
-                {
-                    if (bars.Close[currentOpenPosIdx] > highAmt)
-                    {
-                        highAmt = bars.Close[currentOpenPosIdx];
-                    }
-
-                    currentOpenPosIdx++;
-                }
-
-                sellAtStopLoss = (highAmt * (1 - (sellAtStopLossPct / 100)));
-
-                if (bars.Close[index] <= sellAtStopLoss)
-                {
-                    issueStopLoss = true;
-
-                    if (enableDebugLogging == true)
-                    {
-                        WLLogger.Write("Closed because of Stop Loss");
-                    }
-
-                    break;
-                }
-            }
-            
-        }*/
-
- /*    private void CheckForProfitTaking(BarHistory bars, int index)
-        {
-            //
-            //  If any position reaches its profit goal, close all open position and exit.
-            //	
-            sellAtProfit = (sellAtProfitPct / 100.0) + 1.0;
-
-            takeProfit = false;
-           
-            foreach (Position openPos in OpenPositions)
-            {
-                if (bars.Close[index] >= (openPos.EntryPrice * sellAtProfit))
-                {
-                    takeProfit = true;
-
-                    if (enableDebugLogging == true)
-                    {
-                        WLLogger.Write("Closed because Profit Target Reached: " + (index + 1));
-                    }
-
-                    return;
-                }
-            }
-
-        }*/
-
-
-/*        private void CloseTrades(BarHistory bars, int index)
-        {
-            if  (enableDebugLogging == true)
-            {
-               WLLogger.Write($"CloseTrades");
-            }
-            //  If there is no open trades, exit.
-            if  (LastOpenPosition == null)
-            {
-                return;
-            }
-
-            //          
-            //  If bearish divergence exist, close all open position and exit.
-            //		
-
-            if  (_ptc.Divergence(index, bars.High, out pt, out pt2) == DivergenceType.Bearish)
-            {
-                foreach (Position openPos in OpenPositions)
-                {
-                    ClosePosition(openPos, OrderType.Market, 0, "Sell Bearish Divergence");
-
-                    if (enableDebugLogging == true)
-                    {
-                       WLLogger.Write("Closed positions because of Negative Divergence: " + (index + 1));
-                    }
-                }
-
-                return;
-            }
-            //
-            //  If CompIdx crosses below Overbought, close all open position and exit.
-            //	
-            if (indicatorManager.CustInd.CrossesUnder(overBoughtLevel, index))
-            {
-                foreach (Position openPos in OpenPositions)
-                {
-                    ClosePosition(openPos, OrderType.Market, 0, "Sold @ OverBought");
-
-                    if (enableDebugLogging == true)
-                    {
-                       WLLogger.Write("Closed Crossed Under OverBought Level: " + (index + 1));
-                    }
-                }
-                return;
-            }
-            //
-            //  If CompIdx crosses below OverSold, close all open position and exit.
-            //	
-            if (indicatorManager.CustInd.CrossesUnder(overSoldLevel, index))
-            {
-                foreach (Position openPos in OpenPositions)
-                {
-                    ClosePosition(openPos, OrderType.Market, 0, "Sold At OverSold");
-
-                    if (enableDebugLogging == true)
-                    {
-                       WLLogger.Write("Closed Crossed Under OverSold Level: " + (index + 1));
-                    }
-                }
-                return;
-            }
-            //
-            //  If Stop Loss is recongized on any open position, close all open position and exit.
-            //	
-            foreach (Position openPos in OpenPositions)
-            {
-                highAmt = openPos.EntryPrice;
-                currentOpenPosIdx = openPos.EntryBar;
-
-                while (currentOpenPosIdx <= (index))
-                {
-                    if (bars.Close[currentOpenPosIdx] > highAmt)
-                    {
-                        highAmt = bars.Close[currentOpenPosIdx];
-                    }
-
-                    currentOpenPosIdx++;
-                }
-
-                sellAtStopLoss = (highAmt * (1 - (sellAtStopLossPct / 100)));
-
-                if (bars.Close[index] <= sellAtStopLoss)
-                {
-                    ClosePosition(openPos, OrderType.Market, 0, "Sell at " + sellAtStopLossPct + "% Trailing Loss");
-                    if (enableDebugLogging == true)
-                    {
-                       WLLogger.Write("Closed because of Stop Loss: " + (index + 1));
-                    }
-                }
-            }
-            //
-            //  If any position reaches its profit goal, close all open position and exit.
-            //	
-            sellAtProfit = (sellAtProfitPct / 100.0) + 1.0;
-            foreach (Position openPos in OpenPositions)
-            {
-                if (bars.Close[index] >= (openPos.EntryPrice * sellAtProfit))
-                {
-                    ClosePosition(openPos, OrderType.Market, 0, "Sell at " + sellAtProfitPct + "% profit target");
-                    if (enableDebugLogging == true)
-                    {
-                       WLLogger.Write("Closed because Profit Target Reached: " + (index + 1));
-                    }
-                }
-            }
-
-        }*/
+            DrawText("↑", idx, indicatorManager.SmaVolShort[idx], WLColor.Blue, 30, "Volume Spikes");
+        }  
     }
 }
