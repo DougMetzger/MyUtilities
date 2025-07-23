@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <Nullable>disable</Nullable>
+    <Platforms>AnyCPU;x64</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CompIdxOverUnder\CompIdxOverUnder.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="CompIdxOverUnder">
+      <HintPath>..\..\..\..\..\..\Program Files\Quantacula, LLC\WealthLab 8\CompIdxOverUnder.dll</HintPath>
+    </Reference>
+    <Reference Include="WealthLab.Core">
+      <HintPath>C:\Program Files\Quantacula, LLC\WealthLab 8\WealthLab.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="WealthLab.Data">
+      <HintPath>C:\Program Files\Quantacula, LLC\WealthLab 8\WealthLab.Data.dll</HintPath>
+    </Reference>
+    <Reference Include="WealthLab.Backtest">
+      <HintPath>C:\Program Files\Quantacula, LLC\WealthLab 8\WealthLab.Backtest.dll</HintPath>
+    </Reference>
+    <Reference Include="WealthLab.IQFeed">
+      <HintPath>..\..\..\..\..\..\Program Files\Quantacula, LLC\WealthLab 8\WealthLab.IQFeed.dll</HintPath>
+    </Reference>
+
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Symbols.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
+
+

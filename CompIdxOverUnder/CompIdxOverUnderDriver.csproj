@@ -1,0 +1,67 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <Platforms>AnyCPU;x64;ARM32</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>    
+    <BaseOutputPath>C:\Program Files\Quantacula, LLC\WealthLab 8</BaseOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutputPath>C:\Program Files\Quantacula, LLC\WealthLab 8\</OutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutputPath>C:\Program Files\Quantacula, LLC\WealthLab 8\</OutputPath>
+  </PropertyGroup>
+
+  <!-- And include these globally if not already present -->
+  <PropertyGroup>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="TextContextBuilder.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="WealthLab.Core">
+      <HintPath>C:\Program Files\Quantacula, LLC\WealthLab 8\WealthLab.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="WealthLab.Data">
+      <HintPath>C:\Program Files\Quantacula, LLC\WealthLab 8\WealthLab.Data.dll</HintPath>
+    </Reference>
+    <Reference Include="WealthLab.Backtest">
+      <HintPath>C:\Program Files\Quantacula, LLC\WealthLab 8\WealthLab.Backtest.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Customci.dll">
+      <HintPath>..\..\..\..\..\..\Program Files\Quantacula, LLC\WealthLab 8\Customci.dll</HintPath>
+    </Reference>
+    <Reference Include="WealthLab.Core">
+      <HintPath>..\..\..\..\..\..\Program Files\Quantacula, LLC\WealthLab 8\WealthLab.Core.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+ 
+
+</Project>
