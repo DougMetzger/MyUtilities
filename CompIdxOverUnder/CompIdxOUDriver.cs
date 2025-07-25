@@ -98,15 +98,23 @@ namespace CompIdxOverUnderDriver
         private bool bearishDivergence = false;
         private bool bullishDivergence   = false;
         string divergenceIdentifier = string.Empty;
-      
+
+        string symbol = string.Empty;
+
         public override void Initialize(BarHistory bars)
         {
-            // Load parameters from Strategy GUI
-            compIdxParams = CompIdxParameters.FromStrategyParameters(Parameters);
+            /*          // Load parameters from Strategy GUI
+                       compIdxParams = CompIdxParameters.FromStrategyParameters(Parameters);
 
-            // Load Strategy parameters (AddParameter) for processing.
-            LoadParameters();
+                       // Load Strategy parameters (AddParameter) for processing.
+                       LoadParameters(); */
 
+            //           var loader = new PreferredValueLoader("vs 2022 v4", );
+            var loader = new PreferredValueLoader("vs 2022 v4", "2025 My Strategy Development");
+            symbol = bars.Symbol;
+
+            LoadParametersfromFile(symbol, loader);
+                
             WLLogger.LogAction = msg => WriteToDebugLog(msg);
             if (enableDebugLogging == true)
             {
@@ -114,7 +122,7 @@ namespace CompIdxOverUnderDriver
             }
 
             // Load CompIdx, SMAs, and Volume bar arrays
-            indicatorManager = new IndicatorManager(bars, compIdxParams);
+            indicatorManager = new IndicatorManager(bars, numRsiShort, numRsiLong, numMomRsi, compIdxShort, compIdxLong, numBarsVolShort, numBarsVolLong);
 
             PlotIndicators();                     
 
@@ -209,6 +217,7 @@ namespace CompIdxOverUnderDriver
             if (LastOpenPosition != null)           
             {
                  this.exitManager = new TradeExitManager(
+                   //                                    this,
                                                        bars,
                                                        enableDebugLogging,
                                                        bearishDivergence,
@@ -276,7 +285,44 @@ namespace CompIdxOverUnderDriver
             //			WriteToDebugLog($"enableDebugging: " + enableDebugging);  
 
         }
-                
+
+        private void LoadParametersfromFile(string symbol, PreferredValueLoader loader)
+        {
+            if (enableDebugLogging == true)
+            {
+                WLLogger.Write($"LoadParameters");
+            }
+
+            // RSI and Momentum
+            numRsiShort = (int)loader.Get(symbol, "RsiShort", 12);
+            numRsiLong =  (int)loader.Get(symbol, "RsiLong", 14);
+            numMomRsi = (int)loader.Get(symbol, "MomRsi", 19);
+
+            // Overbought/Oversold levels
+            overSoldLevel = loader.Get(symbol, "OverSold", 30);
+            overBoughtLevel = loader.Get(symbol, "OverBought", 85);
+
+            // Exit logic
+            sellAtStopLossPct = loader.Get(symbol, "StopLoss", 10);
+            sellAtProfitPct = loader.Get(symbol, "ProfitTarget", 50);
+
+            // Comparison Index SMA parameters
+            compIdxShort = (int)loader.Get(symbol, "CompIdxSMA_Short", 13);
+            compIdxLong = (int)loader.Get(symbol, "CompIdxSMA_Long", 39);
+
+            // Volume thresholds
+            numBarsVolLong = (int)loader.Get(symbol, "VolumeLong", 4);
+            numBarsVolShort = (int)loader.Get(symbol, "VolumeShort", 1);
+
+            // Buy threshold and reversal detection
+            thresholdPct = (int)loader.Get(symbol, "TreasholdBuyPct", 4);
+            reversal = loader.Get(symbol, "Reversal", 40);
+
+            // Debug flag
+            enableDebugging = loader.Get(symbol, "Enable Debug", 0);
+            enableDebugLogging = (enableDebugging == 1);
+        }
+
         private void PlotIndicators()
         {
             if (enableDebugLogging == true)
@@ -326,8 +372,13 @@ namespace CompIdxOverUnderDriver
             {
                 WLLogger.Write($"DrawVolumeSpikeMarker");
             }
-
-            DrawText("↑", idx, indicatorManager.SmaVolShort[idx], WLColor.Blue, 30, "Volume Spikes");
+            if (idx >= Math.Max(numBarsVolShort, numBarsVolLong))
+            {
+                if (volSpikeFlags[idx] == true)
+                {
+                    DrawText("↑", idx, indicatorManager.SmaVolShort[idx], WLColor.Blue, 30, "Volume Spikes");
+                }
+            }
         }  
     }
 }

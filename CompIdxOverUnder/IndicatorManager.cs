@@ -18,14 +18,17 @@ namespace CompIdxOverUnderDriver
         public SMA SmaVolShort { get; private set; }
         public SMA SmaVolLong { get; private set; }
 
-        public IndicatorManager(BarHistory bars, CompIdxParameters parameters)
+
+
+        public IndicatorManager(BarHistory bars, int numRsiShort, int numRsiLong, int numMomRsi, int CompIdxShort, int CompIdxLong, int numBarsVolShort, int numBarsVolLong)
         {
-            CustInd = new Customci(bars, 1, parameters.RsiShort, parameters.RsiLong, parameters.MomRsi, parameters.CompIdxSmaShort, parameters.CompIdxSmaLong);
-            CompIdxSmaShort = new SMA(CustInd, parameters.CompIdxSmaShort);
-            CompIdxSmaLong = new SMA(CustInd, parameters.CompIdxSmaLong);
+            CustInd = new Customci(bars, 1, numRsiShort, numRsiLong, numMomRsi, CompIdxShort, CompIdxLong);
+            CompIdxSmaShort = new SMA(CustInd, CompIdxShort);
+            CompIdxSmaLong = new SMA(CustInd, CompIdxLong);
             // ... init other indicators
-            SmaVolShort = new SMA(bars.Volume, parameters.VolumeShort);
-            SmaVolLong = new SMA(bars.Volume, parameters.VolumeLong);
+            SmaVolShort = new SMA(bars.Volume, numBarsVolShort);
+            SmaVolLong = new SMA(bars.Volume, numBarsVolLong);
         }
+
     }
 }
