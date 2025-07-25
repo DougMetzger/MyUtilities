@@ -15,6 +15,4 @@ namespace CompIdxOverUnderDriver
             LogAction?.Invoke(msg);
         }
     }
-
-
 }

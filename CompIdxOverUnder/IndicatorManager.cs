@@ -18,8 +18,6 @@ namespace CompIdxOverUnderDriver
         public SMA SmaVolShort { get; private set; }
         public SMA SmaVolLong { get; private set; }
 
-
-
         public IndicatorManager(BarHistory bars, int numRsiShort, int numRsiLong, int numMomRsi, int CompIdxShort, int CompIdxLong, int numBarsVolShort, int numBarsVolLong)
         {
             CustInd = new Customci(bars, 1, numRsiShort, numRsiLong, numMomRsi, CompIdxShort, CompIdxLong);

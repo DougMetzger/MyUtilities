@@ -21,8 +21,6 @@ namespace CompIdxOverUnderDriver
         private readonly double overSoldLevel;
         private readonly double sellAtStopLossPct;
         private readonly double sellAtProfitPct;
-        //       private readonly bool issueStopLoss;
-        //       private readonly bool takeProfits;
         private readonly Func<IEnumerable<Position>> getOpenPositions;
         private readonly Func<Position> getLastOpenPosition;
         private readonly Action<Position, OrderType, double, string> closePosition;
@@ -48,7 +46,6 @@ namespace CompIdxOverUnderDriver
             //          bool issueStopLoss,
             //          bool takeProfits,
             Func<IEnumerable<Position>> getOpenPositions,
-            Func<Position> getLastOpenPosition,
             Action<Position, OrderType, double, string> closePosition)
 
         {
@@ -60,11 +57,7 @@ namespace CompIdxOverUnderDriver
             this.overBoughtLevel = overBoughtLevel;
             this.sellAtStopLossPct = sellAtStopLossPct;
             this.sellAtProfitPct = sellAtProfitPct;
-            //          this.issueStopLoss = issueStopLoss;
-            //          this.takeProfits = takeProfits;
             this.getOpenPositions = getOpenPositions;
-            this.getLastOpenPosition = getLastOpenPosition;
-
             this.closePosition = closePosition;
         }
 

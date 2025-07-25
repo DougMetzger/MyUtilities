@@ -109,7 +109,7 @@ namespace CompIdxOverUnderDriver
                        // Load Strategy parameters (AddParameter) for processing.
                        LoadParameters(); */
 
-            //           var loader = new PreferredValueLoader("vs 2022 v4", );
+            // Pull in preferred values from other source for processing 
             var loader = new PreferredValueLoader("vs 2022 v4", "2025 My Strategy Development");
             symbol = bars.Symbol;
 
@@ -122,13 +122,19 @@ namespace CompIdxOverUnderDriver
             }
 
             // Load CompIdx, SMAs, and Volume bar arrays
-            indicatorManager = new IndicatorManager(bars, numRsiShort, numRsiLong, numMomRsi, compIdxShort, compIdxLong, numBarsVolShort, numBarsVolLong);
+            indicatorManager = new IndicatorManager(bars,
+                                                    numRsiShort,
+                                                    numRsiLong,
+                                                    numMomRsi, 
+                                                    compIdxShort, 
+                                                    compIdxLong, 
+                                                    numBarsVolShort,
+                                                    numBarsVolLong);
 
             PlotIndicators();                     
 
             // Determine if Spike in Volume  
-            var analyzer = new VolumeSpikeAnalyzer(
-                                                    indicatorManager.SmaVolShort,
+            var analyzer = new VolumeSpikeAnalyzer( indicatorManager.SmaVolShort,
                                                     indicatorManager.SmaVolLong,
                                                     numBarsVolShort,
                                                     numBarsVolLong,
@@ -151,7 +157,13 @@ namespace CompIdxOverUnderDriver
                 WLLogger.Write($"Execute");
             }
 
-            divergenceIdentifier = DivergenceHelper.DivergenceIdentifier(this, bars, idx, indicatorManager.CustInd, reversal, indicatorManager.CustInd.PaneTag, enableDebugLogging);
+            divergenceIdentifier = DivergenceHelper.DivergenceIdentifier(this,
+                                                                        bars,
+                                                                        idx, 
+                                                                        indicatorManager.CustInd,
+                                                                        reversal, 
+                                                                        indicatorManager.CustInd.PaneTag,
+                                                                        enableDebugLogging);
 
             if (divergenceIdentifier == "E")
             {
@@ -169,26 +181,21 @@ namespace CompIdxOverUnderDriver
                 bullishDivergence = false;
             }
 
-
             // Draw an upward arrow in Volume Pane if volume spike occures. 
             DrawVolumeSpikeMarker(idx);
 
-            /*          if (idx >= Math.Max(numBarsVolShort, numBarsVolLong))
-                      {
-                          if (volSpikeFlags[idx] == true)
-                          {
-                              DrawText("↑", idx, indicatorManager.SmaVolShort[idx], WLColor.Blue, 30, "Volume Spikes");
-                          }
-                      }     */
-
-            // Determine what trades already exist for symbol at three locations: crossover Oversold, crossover Midpoint, crossover OverBought.  Only allow one trade per location.
+            // Determine what trades already exist for symbol at three levels: crossover Oversold, crossover Midpoint, crossover OverBought.  Logic in "TradeEntryManager" only allows multiple trades, but only one trade per level. 
             var review = new ReviewCurrentPosition(enableDebugLogging);
-            review.Analyze(HasOpenPosition); // Pass the method reference in
+            review.Analyze(HasOpenPosition); // Determine if there is an open position for the symbol at the three levels: Oversold, Midpoint, and OverBought.  If so, set flags to true.
 
-            // Determine if Trade Violation
+            // Determine if Trade Violation exists: For example, if no open position exist, then check the last closed position to see if it was closed within the last "avoidTradingViolation" bars.      
             dateStr = bars.DateTimes[idx].ToString("MM-dd-yyyy");
             noTradeViolation = true;           
-            var violationCheck = new TradeViolationUtil(this, bars, idx, avoidTradingViolation, enableDebugLogging);
+            var violationCheck = new TradeViolationUtil(this,
+                                                        bars,
+                                                        idx,
+                                                        avoidTradingViolation,
+                                                        enableDebugLogging);
 
             if (!violationCheck.NoTradeViolation)
             {
@@ -227,9 +234,7 @@ namespace CompIdxOverUnderDriver
                                                        sellAtStopLossPct,
                                                        sellAtProfitPct,
                                                        () => OpenPositions,
-                                                       () => LastOpenPosition,
-                                                       (pos, type, qty, reason) => ClosePosition(pos, type, qty, reason)
-                                              );
+                                                       (pos, type, qty, reason) => ClosePosition(pos, type, qty, reason));
 
                 this.exitManager.CloseTrades(idx);
             }
