@@ -9,10 +9,16 @@ namespace CompIdxOverUnderDriver
 {
     public class PreferredValueLoader
     {
-        private Dictionary<string, Dictionary<string, double>> symbolValues = new();
+        // Shared static dictionary across all instances
+        private static readonly Dictionary<string, Dictionary<string, double>> paramTable = new();
 
-        public PreferredValueLoader(string strategyName, string strategyFolder = "")
+        // Optional: For debugging/logging preference
+        private readonly bool enableDebugLogging;
+
+        public PreferredValueLoader(string strategyName, string strategyFolder, bool enableDebugLogging)
         {
+            this.enableDebugLogging = enableDebugLogging;
+
             string basePath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "WealthLab8",
@@ -22,7 +28,6 @@ namespace CompIdxOverUnderDriver
                 basePath = Path.Combine(basePath, strategyFolder);
 
             string path = Path.Combine(basePath, strategyName + ".xml");
-
 
             if (!File.Exists(path))
                 throw new FileNotFoundException($"Strategy XML not found: {path}");
@@ -45,21 +50,23 @@ namespace CompIdxOverUnderDriver
                     if (!string.IsNullOrEmpty(name) && double.TryParse(valueStr, out double value))
                     {
                         paramDict[name] = value;
-                                                
-                        WLLogger.Write($"[PreferredValueLoader] {symbol} → {name} = {value}");
-                        
-                        System.Diagnostics.Debug.WriteLine($"[PreferredValueLoader] {symbol} → {name} = {value}");
 
+                        if (enableDebugLogging)
+                        {
+                            WLLogger.Write($"[PreferredValueLoader] {symbol} → {name} = {value}");
+                            System.Diagnostics.Debug.WriteLine($"[PreferredValueLoader] {symbol} → {name} = {value}");
+                        }
                     }
                 }
 
-                symbolValues[symbol] = paramDict;
+                paramTable[symbol] = paramDict;
             }
         }
 
-        public double Get(string symbol, string paramName, double fallback = 0.0)
+        // Static accessor for any component
+        public static double Get(string symbol, string paramName, double fallback = 0.0)
         {
-            if (symbolValues.TryGetValue(symbol, out var paramDict) &&
+            if (paramTable.TryGetValue(symbol, out var paramDict) &&
                 paramDict.TryGetValue(paramName, out double value))
             {
                 return value;
@@ -67,6 +74,13 @@ namespace CompIdxOverUnderDriver
 
             return fallback;
         }
+
+        // Optional: expose full table (read-only) for advanced consumers
+        public static IReadOnlyDictionary<string, Dictionary<string, double>> GetTable()
+        {
+            return paramTable;
+        }
     }
+
 
 }

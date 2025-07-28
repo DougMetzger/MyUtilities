@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using WealthLab.Backtest;
 using WealthLab.Core;
 using WealthLab.Indicators;
 using WealthLab.MyIndicators;
@@ -28,5 +29,27 @@ namespace CompIdxOverUnderDriver
             SmaVolLong = new SMA(bars.Volume, numBarsVolLong);
         }
 
+
+
+        public void PlotCustIndVolume(UserStrategyBase strategy, double overSoldLevel, double overBoughtLevel)
+        {
+            // Composite Indicator visuals
+            strategy.PlotIndicator(CustInd, new WLColor(0, 0, 0));
+            CustInd.MassageColors = true;
+
+            strategy.PlotIndicator(CompIdxSmaShort, WLColor.Blue, PlotStyle.Line, false, "Custom Composite Indicator");
+            strategy.PlotIndicator(CompIdxSmaLong, WLColor.Red, PlotStyle.Line, false, "Custom Composite Indicator");
+            strategy.DrawHeaderText("Custom Composite Indicator", WLColor.Coral, 17, "Custom Composite Indicator", true);
+
+            // Volume Spike visuals
+            strategy.PlotIndicator(SmaVolShort, WLColor.Blue, PlotStyle.Line, false, "Volume Spikes");
+            strategy.PlotIndicator(SmaVolLong, WLColor.Red, PlotStyle.Line, false, "Volume Spikes");
+
+            // Threshold visuals
+            strategy.DrawHorzLine(overSoldLevel, WLColor.Black, 1, LineStyle.Solid, "Custom Composite Indicator");
+            strategy.DrawHorzLine(overBoughtLevel, WLColor.Black, 1, LineStyle.Solid, "Custom Composite Indicator");
+
+            strategy.DrawHeaderText("VolumeSpikes", WLColor.Coral, 17, "Volume Spikes", true);
+        }
     }
 }

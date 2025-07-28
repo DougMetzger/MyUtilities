@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
+using System.Reflection.Metadata.Ecma335;
 using WealthLab.Backtest;
 using WealthLab.Core;
 using WealthLab.Indicators;
 using WealthLab.MyIndicators;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
 
 
 namespace CompIdxOverUnderDriver
@@ -37,14 +38,8 @@ namespace CompIdxOverUnderDriver
         private TradeEntryManager tradeEntryManager;
         private readonly ReviewCurrentPosition reviewCurrPos;
         private TradeExitManager exitManager;
-       
-
+     
         private bool[] volSpikeFlags;
-
- //       private readonly Customci custInd;
-
-               
- //       private CompIdxParameters _parameters;
 
         private int numRsiShort;
         private int numRsiLong;
@@ -78,8 +73,9 @@ namespace CompIdxOverUnderDriver
 
         private bool noTradeViolation = true;
         
-        private bool enableDebugLogging = false;
-        private double enableDebugging = 1;   // True = 1 and False = 2     
+        private bool enableDebugLogging = true;
+        private double enableDebugging = 1;   // True = 1 and False = 2
+        private bool processExternalPreferredValues = true;                                      // 
 
         private string dateStr;
 
@@ -101,25 +97,42 @@ namespace CompIdxOverUnderDriver
 
         string symbol = string.Empty;
 
+ internal static Dictionary<string, Dictionary<string, double>> paramTable;
+
+        public override void BacktestBegin()
+        {
+            enableDebugLogging = true; // Set to false if you want to disable debug logging.
+            processExternalPreferredValues = true; // Set to false if you want to use parameters from Strategy GUI only.
+
+            if (enableDebugLogging)
+            {
+                WLLogger.LogAction = msg => WriteToDebugLog(msg);
+                WLLogger.Write("Logger initialized in BacktestBegin");
+            }
+   //        var loader = new PreferredValueLoader("Weekly Consolidated NSDQ 2024 12 31 Particle Swarm", "2025 06 04 Weeky Detrend", enableDebugLogging);
+             var loader = new PreferredValueLoader("vs 2022 v4", "2025 My Strategy Development", enableDebugLogging);
+        }
+
         public override void Initialize(BarHistory bars)
         {
-            /*          // Load parameters from Strategy GUI
-                       compIdxParams = CompIdxParameters.FromStrategyParameters(Parameters);
 
-                       // Load Strategy parameters (AddParameter) for processing.
-                       LoadParameters(); */
-
-            // Pull in preferred values from other source for processing 
-            var loader = new PreferredValueLoader("vs 2022 v4", "2025 My Strategy Development");
-            symbol = bars.Symbol;
-
-            LoadParametersfromFile(symbol, loader);
-                
-            WLLogger.LogAction = msg => WriteToDebugLog(msg);
-            if (enableDebugLogging == true)
-            {
-                WLLogger.Write($"Initialize");
+            if (processExternalPreferredValues == true)
+            { 
+                LoadParametersfromFile(bars.Symbol); // Load parameters from external file
+                if (enableDebugLogging)
+                {
+                    WLLogger.Write("Load Preferred Values from External File");
+                }
             }
+            else
+            {
+                if (enableDebugLogging)
+                {
+                    WLLogger.Write("Load Preferred Values from Strategy GUI");
+                }
+                compIdxParams = CompIdxParameters.FromStrategyParameters(Parameters); // Load parameters from Strategy GUI
+                LoadParameters(); // Load parameters from Strategy GUI
+            }       
 
             // Load CompIdx, SMAs, and Volume bar arrays
             indicatorManager = new IndicatorManager(bars,
@@ -131,7 +144,8 @@ namespace CompIdxOverUnderDriver
                                                     numBarsVolShort,
                                                     numBarsVolLong);
 
-            PlotIndicators();                     
+            //         PlotIndicators();
+            indicatorManager.PlotCustIndVolume(this, overSoldLevel, overBoughtLevel);
 
             // Determine if Spike in Volume  
             var analyzer = new VolumeSpikeAnalyzer( indicatorManager.SmaVolShort,
@@ -184,19 +198,18 @@ namespace CompIdxOverUnderDriver
             // Draw an upward arrow in Volume Pane if volume spike occures. 
             DrawVolumeSpikeMarker(idx);
 
-            // Determine what trades already exist for symbol at three levels: crossover Oversold, crossover Midpoint, crossover OverBought.  Logic in "TradeEntryManager" only allows multiple trades, but only one trade per level. 
+            // Determine what trades already exist for symbol at three levels: crossover Oversold, crossover Midpoint, crossover OverBought.  Logic in "TradeEntryManager" allows multiple trades, but only one trade per level. 
             var review = new ReviewCurrentPosition(enableDebugLogging);
-            review.Analyze(HasOpenPosition); // Determine if there is an open position for the symbol at the three levels: Oversold, Midpoint, and OverBought.  If so, set flags to true.
+            review.Analyze(HasOpenPosition); // Determine if there is an open position for the symbol at the following levels: Oversold, Midpoint, and OverBought.  If so, set flags to true.
 
             // Determine if Trade Violation exists: For example, if no open position exist, then check the last closed position to see if it was closed within the last "avoidTradingViolation" bars.      
-            dateStr = bars.DateTimes[idx].ToString("MM-dd-yyyy");
+  //          dateStr = bars.DateTimes[idx].ToString("MM-dd-yyyy");
             noTradeViolation = true;           
             var violationCheck = new TradeViolationUtil(this,
                                                         bars,
                                                         idx,
                                                         avoidTradingViolation,
                                                         enableDebugLogging);
-
             if (!violationCheck.NoTradeViolation)
             {
                 noTradeViolation = false;
@@ -276,7 +289,7 @@ namespace CompIdxOverUnderDriver
 
             reversal = compIdxParams.Reversal;
 
-            enableDebugging = compIdxParams.EnableDebug;                    
+ /*           enableDebugging = compIdxParams.EnableDebug;                    
 
             if (enableDebugging == 1)
             {
@@ -285,50 +298,57 @@ namespace CompIdxOverUnderDriver
             else
             {
                 enableDebugLogging = false;
-            }
-
-            //			WriteToDebugLog($"enableDebugging: " + enableDebugging);  
-
+            }*/
+        
         }
 
-        private void LoadParametersfromFile(string symbol, PreferredValueLoader loader)
+        private void LoadParametersfromFile(string symbol)
         {
             if (enableDebugLogging == true)
             {
-                WLLogger.Write($"LoadParameters");
+                WLLogger.Write($"LoadParameters From External File");
             }
 
+
             // RSI and Momentum
-            numRsiShort = (int)loader.Get(symbol, "RsiShort", 12);
-            numRsiLong =  (int)loader.Get(symbol, "RsiLong", 14);
-            numMomRsi = (int)loader.Get(symbol, "MomRsi", 19);
+            numRsiShort = (int)PreferredValueLoader.Get(symbol, "RsiShort", 12);
+            numRsiLong =  (int)PreferredValueLoader.Get(symbol, "RsiLong", 14);
+            numMomRsi = (int)PreferredValueLoader.Get(symbol, "MomRsi", 19);
 
             // Overbought/Oversold levels
-            overSoldLevel = loader.Get(symbol, "OverSold", 30);
-            overBoughtLevel = loader.Get(symbol, "OverBought", 85);
+            overSoldLevel = PreferredValueLoader.Get(symbol, "OverSold", 30);
+            overBoughtLevel = PreferredValueLoader.Get(symbol, "OverBought", 85);
 
             // Exit logic
-            sellAtStopLossPct = loader.Get(symbol, "StopLoss", 10);
-            sellAtProfitPct = loader.Get(symbol, "ProfitTarget", 50);
+            sellAtStopLossPct = PreferredValueLoader.Get(symbol, "StopLoss", 10);
+            sellAtProfitPct = PreferredValueLoader.Get(symbol, "ProfitTarget", 50);
 
             // Comparison Index SMA parameters
-            compIdxShort = (int)loader.Get(symbol, "CompIdxSMA_Short", 13);
-            compIdxLong = (int)loader.Get(symbol, "CompIdxSMA_Long", 39);
+            compIdxShort = (int)PreferredValueLoader.Get(symbol, "CompIdxSMA_Short", 13);
+            compIdxLong = (int)PreferredValueLoader.Get(symbol, "CompIdxSMA_Long", 39);
 
             // Volume thresholds
-            numBarsVolLong = (int)loader.Get(symbol, "VolumeLong", 4);
-            numBarsVolShort = (int)loader.Get(symbol, "VolumeShort", 1);
+            numBarsVolLong = (int)PreferredValueLoader.Get(symbol, "VolumeLong", 4);
+            numBarsVolShort = (int)PreferredValueLoader.Get(symbol, "VolumeShort", 1);
 
             // Buy threshold and reversal detection
-            thresholdPct = (int)loader.Get(symbol, "TreasholdBuyPct", 4);
-            reversal = loader.Get(symbol, "Reversal", 40);
+            thresholdPct = (int)PreferredValueLoader.Get(symbol, "TreasholdBuyPct", 4);
+            reversal = PreferredValueLoader.Get(symbol, "Reversal", 40);
 
             // Debug flag
-            enableDebugging = loader.Get(symbol, "Enable Debug", 0);
-            enableDebugLogging = (enableDebugging == 1);
+            enableDebugging = PreferredValueLoader.Get(symbol, "Enable Debug", 0);
+ //           enableDebugLogging = (enableDebugging == 1);
+ /*           if (enableDebugging == 1)
+            {
+                enableDebugLogging = true;
+            }
+            else
+            {
+                enableDebugLogging = false;
+            }*/
         }
 
-        private void PlotIndicators()
+/*        private void PlotIndicators()
         {
             if (enableDebugLogging == true)
             {
@@ -346,7 +366,7 @@ namespace CompIdxOverUnderDriver
             DrawHorzLine(overSoldLevel, WLColor.Black, 1, LineStyle.Solid, "Custom Composite Indicator");
             DrawHorzLine(overBoughtLevel, WLColor.Black, 1, LineStyle.Solid, "Custom Composite Indicator");
             DrawHeaderText("VolumeSpikes", WLColor.Coral, 17, "Volume Spikes", true);
-        }
+        }*/
 
         private void PlotPriceSma(BarHistory bars)
         {

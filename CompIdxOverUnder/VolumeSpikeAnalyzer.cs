@@ -42,7 +42,7 @@ namespace CompIdxOverUnderDriver
         {
            if (enableDebugLogging)
             {
-                WLLogger.Write("VolumSpikeAnalyzer");  // Or your custom logger
+                WLLogger.Write("VolumSpikeAnalyzer");  
             }
 
             bool[] volSpikeFlags = new bool[bars.Count];
@@ -57,7 +57,7 @@ namespace CompIdxOverUnderDriver
                                        
                     if (enableDebugLogging)
                     {             
-                        WLLogger.Write($"Symbol: {bars.Symbol} Bar: {bar} SMA Short: {smaVolShort[bar]:F3}, " +
+                        WLLogger.Write($" Volume Spikes: Symbol {bars.Symbol} Bar: {bar} SMA Short: {smaVolShort[bar]:F3}, " +
                                    $"SMA Long: {smaVolLong[bar]:F3}, Diff%: {pctDiff:F3}, Flag: {volSpikeFlags[bar]}");
                     }
                 }
@@ -65,5 +65,12 @@ namespace CompIdxOverUnderDriver
 
             return volSpikeFlags;
         }
+        
+        private void DrawText(string text, int bar, double value, WLColor color, int size, string paneTag)
+        {
+            // Stub for actual drawing logic.
+            // You can inject or abstract this out depending on your rendering pipeline.
+        }
+
     }
 }
