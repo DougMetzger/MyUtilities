@@ -21,7 +21,10 @@ namespace CompIdxOverUnderDriver
         private readonly double thresholdPct;
         private readonly bool enableDebugLogging;
 
-        #pragma warning disable IDE0290
+        private bool[] volSpikeFlags;
+
+
+#pragma warning disable IDE0290
         public VolumeSpikeAnalyzer(
             SMA smaVolShort,
             SMA smaVolLong,
@@ -45,7 +48,7 @@ namespace CompIdxOverUnderDriver
                 WLLogger.Write("VolumSpikeAnalyzer");  
             }
 
-            bool[] volSpikeFlags = new bool[bars.Count];
+            volSpikeFlags = new bool[bars.Count];
             int startBar = Math.Max(numBarsVolShort, numBarsVolLong);
 
             for (int bar = startBar; bar < bars.Count; bar++)
@@ -65,11 +68,20 @@ namespace CompIdxOverUnderDriver
 
             return volSpikeFlags;
         }
-        
-        private void DrawText(string text, int bar, double value, WLColor color, int size, string paneTag)
+
+        public void DrawVolumeSpike(UserStrategyBase strategy, int idx)
         {
-            // Stub for actual drawing logic.
-            // You can inject or abstract this out depending on your rendering pipeline.
+            if (enableDebugLogging)
+                WLLogger.Write($"[VolumeSpikeAnalyzer] DrawVolumeSpikeMarker invoked at index: {idx}");
+
+            if (idx < Math.Max(numBarsVolShort, numBarsVolLong))
+                return;
+
+            if (volSpikeFlags[idx])
+            {
+                var volumeValue = smaVolShort?[idx] ?? 0;
+                strategy.DrawText("↑", idx, volumeValue, WLColor.Blue, 30, "Volume Spikes");
+            }
         }
 
     }

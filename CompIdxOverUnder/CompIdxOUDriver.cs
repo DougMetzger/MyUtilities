@@ -97,7 +97,9 @@ namespace CompIdxOverUnderDriver
 
         string symbol = string.Empty;
 
- internal static Dictionary<string, Dictionary<string, double>> paramTable;
+        private VolumeSpikeAnalyzer analyzer; // in your class
+               
+        internal static Dictionary<string, Dictionary<string, double>> paramTable;
 
         public override void BacktestBegin()
         {
@@ -148,12 +150,12 @@ namespace CompIdxOverUnderDriver
             indicatorManager.PlotCustIndVolume(this, overSoldLevel, overBoughtLevel);
 
             // Determine if Spike in Volume  
-            var analyzer = new VolumeSpikeAnalyzer( indicatorManager.SmaVolShort,
-                                                    indicatorManager.SmaVolLong,
-                                                    numBarsVolShort,
-                                                    numBarsVolLong,
-                                                    thresholdPct,
-                                                    enableDebugLogging);
+            analyzer = new VolumeSpikeAnalyzer( indicatorManager.SmaVolShort,
+                                                indicatorManager.SmaVolLong,
+                                                numBarsVolShort,
+                                                numBarsVolLong,
+                                                thresholdPct,
+                                                enableDebugLogging);
 
             volSpikeFlags = analyzer.Analyze(bars);
 
@@ -196,8 +198,12 @@ namespace CompIdxOverUnderDriver
             }
 
             // Draw an upward arrow in Volume Pane if volume spike occures. 
-            DrawVolumeSpikeMarker(idx);
 
+            //       var drawVolumeSpikeMarker = new VolumeSpikeAnalyzer.DrawVolumeSpikeMarker(this, idx);
+
+
+            analyzer.DrawVolumeSpike(this, idx);
+            
             // Determine what trades already exist for symbol at three levels: crossover Oversold, crossover Midpoint, crossover OverBought.  Logic in "TradeEntryManager" allows multiple trades, but only one trade per level. 
             var review = new ReviewCurrentPosition(enableDebugLogging);
             review.Analyze(HasOpenPosition); // Determine if there is an open position for the symbol at the following levels: Oversold, Midpoint, and OverBought.  If so, set flags to true.
@@ -309,7 +315,6 @@ namespace CompIdxOverUnderDriver
                 WLLogger.Write($"LoadParameters From External File");
             }
 
-
             // RSI and Momentum
             numRsiShort = (int)PreferredValueLoader.Get(symbol, "RsiShort", 12);
             numRsiLong =  (int)PreferredValueLoader.Get(symbol, "RsiLong", 14);
@@ -391,7 +396,7 @@ namespace CompIdxOverUnderDriver
             }
         }
 
-        private void DrawVolumeSpikeMarker(int idx)
+/*        private void DrawVolumeSpikeMarker(int idx)
         {
             if (enableDebugLogging == true)
             {
@@ -404,6 +409,6 @@ namespace CompIdxOverUnderDriver
                     DrawText("↑", idx, indicatorManager.SmaVolShort[idx], WLColor.Blue, 30, "Volume Spikes");
                 }
             }
-        }  
+        }  */
     }
 }
