@@ -35,6 +35,7 @@ namespace CompIdxOverUnderDriver
                 
         private CompIdxParameters compIdxParams;
         private IndicatorManager indicatorManager;
+        private DetrendManager detrendManager; 
         private TradeEntryManager tradeEntryManager;
         private readonly ReviewCurrentPosition reviewCurrPos;
         private TradeExitManager exitManager;
@@ -101,6 +102,14 @@ namespace CompIdxOverUnderDriver
                
         internal static Dictionary<string, Dictionary<string, double>> paramTable;
 
+        private SMA smaDetrendSlow;
+        private SMA smaDetrendFast;
+        private SMA smaDetrend;
+        private double detrendValue = 0.0;
+        private int detrendIdx = 0;
+        private int detrendPeriodSlow = 7;
+        
+
         public override void BacktestBegin()
         {
             enableDebugLogging = true; // Set to false if you want to disable debug logging.
@@ -146,7 +155,7 @@ namespace CompIdxOverUnderDriver
                                                     numBarsVolShort,
                                                     numBarsVolLong);
 
-            //         PlotIndicators();
+            // Plot Custom Indicator and Volume 
             indicatorManager.PlotCustIndVolume(this, overSoldLevel, overBoughtLevel);
 
             // Determine if Spike in Volume  
@@ -157,10 +166,18 @@ namespace CompIdxOverUnderDriver
                                                 thresholdPct,
                                                 enableDebugLogging);
 
+            // Plot Volume Spikes
             volSpikeFlags = analyzer.Analyze(bars);
 
+            // Plot Price SMAs.
             PlotPriceSma(bars);
-            
+
+            //  Determine Detrend  
+            detrendManager = new DetrendManager(bars, detrendPeriodSlow, enableDebugLogging = false);
+
+            //Plot Detrend
+            detrendManager.PlotDetrend(this);
+
             StartIndex = compIdxLong;
         }
 
@@ -257,6 +274,8 @@ namespace CompIdxOverUnderDriver
 
                 this.exitManager.CloseTrades(idx);
             }
+
+            
         }
 
         private bool HasOpenPosition(string entrySignalName)
@@ -353,26 +372,6 @@ namespace CompIdxOverUnderDriver
             }*/
         }
 
-/*        private void PlotIndicators()
-        {
-            if (enableDebugLogging == true)
-            {
-               WLLogger.Write($"PlotIndicators");
-            }
-
-            PlotIndicator(indicatorManager.CustInd, new WLColor(0, 0, 0));
-            indicatorManager.CustInd.MassageColors = true;
-            PlotIndicator(indicatorManager.CompIdxSmaShort, WLColor.Blue, PlotStyle.Line, false, "Custom Composite Indicator");
-            PlotIndicator(indicatorManager.CompIdxSmaLong, WLColor.Red, PlotStyle.Line, false, "Custom Composite Indicator");
-            DrawHeaderText("Custom Composite Indicator", WLColor.Coral, 17, "Custom Composite Indicator", true);
-
-            PlotIndicator(indicatorManager.SmaVolShort, WLColor.Blue, PlotStyle.Line, false, "Volume Spikes");
-            PlotIndicator(indicatorManager.SmaVolLong, WLColor.Red, PlotStyle.Line, false, "Volume Spikes");
-            DrawHorzLine(overSoldLevel, WLColor.Black, 1, LineStyle.Solid, "Custom Composite Indicator");
-            DrawHorzLine(overBoughtLevel, WLColor.Black, 1, LineStyle.Solid, "Custom Composite Indicator");
-            DrawHeaderText("VolumeSpikes", WLColor.Coral, 17, "Volume Spikes", true);
-        }*/
-
         private void PlotPriceSma(BarHistory bars)
         {
             if (enableDebugLogging == true)
@@ -395,20 +394,5 @@ namespace CompIdxOverUnderDriver
                 PlotIndicator(sma200, WLColor.Black, PlotStyle.Line, false, "Price");
             }
         }
-
-/*        private void DrawVolumeSpikeMarker(int idx)
-        {
-            if (enableDebugLogging == true)
-            {
-                WLLogger.Write($"DrawVolumeSpikeMarker");
-            }
-            if (idx >= Math.Max(numBarsVolShort, numBarsVolLong))
-            {
-                if (volSpikeFlags[idx] == true)
-                {
-                    DrawText("↑", idx, indicatorManager.SmaVolShort[idx], WLColor.Blue, 30, "Volume Spikes");
-                }
-            }
-        }  */
     }
 }
