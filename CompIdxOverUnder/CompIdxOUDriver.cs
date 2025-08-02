@@ -36,6 +36,7 @@ namespace CompIdxOverUnderDriver
 
         private CompIdxParameters compIdxParams;
         private IndicatorManager indicatorManager;
+        private DetrendManager detrendManager; 
         private TradeEntryManager tradeEntryManager;
         private readonly ReviewCurrentPosition reviewCurrPos;
         private TradeExitManager exitManager;
@@ -158,7 +159,7 @@ namespace CompIdxOverUnderDriver
                                                     numBarsVolShort,
                                                     numBarsVolLong);
 
-            //         PlotIndicators();
+            // Plot Custom Indicator and Volume 
             indicatorManager.PlotCustIndVolume(this, overSoldLevel, overBoughtLevel);
 
             // Determine if Spike in Volume  
@@ -169,8 +170,10 @@ namespace CompIdxOverUnderDriver
                                                 thresholdPct,
                                                 enableDebugLogging);
 
+            // Plot Volume Spikes
             volSpikeFlags = analyzer.Analyze(bars);
 
+            // Plot Price SMAs.
             PlotPriceSma(bars);
 
             detrendIndicatorManager = new DetrendIndicatorManager(bars, detrendPeriod);
@@ -296,6 +299,8 @@ namespace CompIdxOverUnderDriver
             {
                 this.exitManager.CloseTrades(idx);
             }
+
+            
         }
 
         private bool HasOpenPosition(string entrySignalName)
