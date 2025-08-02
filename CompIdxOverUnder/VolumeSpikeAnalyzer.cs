@@ -79,8 +79,9 @@ namespace CompIdxOverUnderDriver
 
             if (volSpikeFlags[idx])
             {
+                int tempIdx = (idx - 1);
                 var volumeValue = smaVolShort?[idx] ?? 0;
-                strategy.DrawText("↑", idx, volumeValue, WLColor.Blue, 30, "Volume Spikes");
+                strategy.DrawText("↑", tempIdx, volumeValue, WLColor.Blue, 30, "Volume Spikes");
             }
         }
 

@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using WealthLab.Core;
 using WealthLab.Backtest;
+using WealthLab.Core;
 using WealthLab.MyIndicators;
 
 namespace CompIdxOverUnderDriver
@@ -21,6 +22,10 @@ namespace CompIdxOverUnderDriver
         private readonly bool hasMidpointPosition; 
         private readonly bool enableDebugLogging;
         private readonly Action<BarHistory, TransactionType, OrderType, double, double, string> placeTrade;
+        private readonly UserStrategyBase strategy;
+
+        private DetrendIndicator.DetrendIndicatorManager detrendManager;
+
 
 #pragma warning disable IDE0290
         public TradeEntryManager(
@@ -33,7 +38,8 @@ namespace CompIdxOverUnderDriver
             bool hasOverBoughtPosition, 
             bool hasMidpointPosition,            
             bool enableDebugLogging,
-            Action<BarHistory, TransactionType, OrderType, double, double, string> placeTrade)        
+            Action<BarHistory, TransactionType, OrderType, double, double, string> placeTrade,
+            UserStrategyBase strategy)        
         {
             this.bars = bars;
             this.customCI = customCI;
@@ -45,6 +51,7 @@ namespace CompIdxOverUnderDriver
             this.hasMidpointPosition = hasMidpointPosition; 
             this.enableDebugLogging = enableDebugLogging;
             this.placeTrade = placeTrade;
+            this.strategy = strategy;
         }
 
         public void Evaluate(int index)
@@ -60,30 +67,54 @@ namespace CompIdxOverUnderDriver
             if (customCI.CrossesOver(overSoldLevel, index) &&
                 !hasOverSoldPosition)
             {
-                PlaceAndLogTrade("Buy @ OverSold", index);
+                PlaceAndLogTrade("Buy @ OverSold", index, strategy);
                 return;
             }
 
             if (customCI.CrossesOver(overBoughtLevel, index) &&
                 !hasOverBoughtPosition)
             {
-                PlaceAndLogTrade("Buy @ OverBought", index);
+                PlaceAndLogTrade("Buy @ OverBought", index, strategy);
                 return;
             }
 
             if (customCI.CrossesOver(midPoint, index) &&
                 !hasMidpointPosition)
             {
-                PlaceAndLogTrade("Buy @ MidPoint", index);
+                PlaceAndLogTrade("Buy @ MidPoint", index, strategy);
             }
         }
 
-        private void PlaceAndLogTrade(string reason, int index)
+        private void PlaceAndLogTrade(string reason, int index, UserStrategyBase strategy)
         {
+
+            int tempIndex = (index - 1);
+            detrendManager = new DetrendIndicator.DetrendIndicatorManager(bars, 7);  // Provided 7 to fullfill constructor, but doesn't play a roll in processing.
+            
+            if (detrendManager.IsDetrendNegative(index))
+            {
+                if (enableDebugLogging)
+                {
+                    WLLogger.Write($"TradeEntryManager: Detrend is *** NEGATIVE *** at index {index}, skipping trade.");                          
+                  
+                    strategy.DrawText("↑", tempIndex, 0, WLColor.Blue, 30, "Detrend Indicator");
+                      
+
+                    return;
+                }
+                else
+                {
+                    return;
+                }
+            }
+
             placeTrade?.Invoke(bars, TransactionType.Buy, OrderType.Market, 0, 0, reason);
 
             if (enableDebugLogging)
-                WLLogger.Write($"{reason} @ index {index}, symbol {bars.Symbol}");
-        }       
+            {
+                WLLogger.Write($"*********************************PlaceTrade:********************************* {reason} @ index {index}, symbol {bars.Symbol}");
+            }
+        }                                                                                      
+         
     }
 }

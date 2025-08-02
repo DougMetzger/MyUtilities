@@ -111,7 +111,7 @@ namespace CompIdxOverUnderDriver
             {
                 this.closePosition(pos, OrderType.Market, 0, reason);
                 if (enableDebugLogging)
-                    WLLogger.Write($"Closed All Pos {reason}: {index + 1}");
+                    WLLogger.Write($"#####################################Closed All Pos##################################### {reason}: {index + 1}");
             }
 
             if (enableDebugLogging)
@@ -142,7 +142,7 @@ namespace CompIdxOverUnderDriver
 
                     if (enableDebugLogging == true)
                     {
-                        WLLogger.Write("Closed because of Stop Loss");
+                        WLLogger.Write("#####################################Closed Position because of Stop Loss#####################################");
                     }
                 }
             }
@@ -163,7 +163,7 @@ namespace CompIdxOverUnderDriver
 
                     if (enableDebugLogging == true)
                     {
-                        WLLogger.Write("Closed because Profit Target Reached: " + (index + 1));
+                        WLLogger.Write("#####################################Closed Position because Profit Target Reached:##################################### " + (index + 1));
                     }
 
  //                   return;

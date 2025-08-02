@@ -24,6 +24,8 @@
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="DetrendManagertemp.cs" />
+    <Compile Remove="EntryValidator.cs" />
     <Compile Remove="TextContextBuilder.cs" />
   </ItemGroup>
 
