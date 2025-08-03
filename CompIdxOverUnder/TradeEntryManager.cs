@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using WealthLab.Backtest;
 using WealthLab.Core;
 using WealthLab.MyIndicators;
+using static CompIdxOverUnderDriver.CompIdxOUDriver;
 
 namespace CompIdxOverUnderDriver
 {
@@ -23,8 +24,7 @@ namespace CompIdxOverUnderDriver
         private readonly bool enableDebugLogging;
         private readonly Action<BarHistory, TransactionType, OrderType, double, double, string> placeTrade;
         private readonly UserStrategyBase strategy;
-
-        private DetrendIndicator.DetrendIndicatorManager detrendManager;
+        private readonly IDetrendIndicatorProvider detrendIndicatorManager;
 
 
 #pragma warning disable IDE0290
@@ -35,12 +35,13 @@ namespace CompIdxOverUnderDriver
             double overSoldLevel,
             double overBoughtLevel,
             bool hasOverSoldPosition,
-            bool hasOverBoughtPosition, 
-            bool hasMidpointPosition,            
+            bool hasOverBoughtPosition,
+            bool hasMidpointPosition,
             bool enableDebugLogging,
             Action<BarHistory, TransactionType, OrderType, double, double, string> placeTrade,
-            UserStrategyBase strategy)        
-        {
+            UserStrategyBase strategy,
+           IDetrendIndicatorProvider detrendIndicatorManager)
+        { 
             this.bars = bars;
             this.customCI = customCI;
             this.volSpikeFlags = volSpikeFlags;
@@ -52,6 +53,7 @@ namespace CompIdxOverUnderDriver
             this.enableDebugLogging = enableDebugLogging;
             this.placeTrade = placeTrade;
             this.strategy = strategy;
+            this.detrendIndicatorManager =  detrendIndicatorManager; 
         }
 
         public void Evaluate(int index)
@@ -89,9 +91,9 @@ namespace CompIdxOverUnderDriver
         {
 
             int tempIndex = (index - 1);
-            detrendManager = new DetrendIndicator.DetrendIndicatorManager(bars, 7);  // Provided 7 to fullfill constructor, but doesn't play a roll in processing.
+  //          detrendManager = new DetrendIndicator.DetrendIndicatorManager(bars, 7);  // Provided 7 to fullfill constructor, but doesn't play a roll in processing.
             
-            if (detrendManager.IsDetrendNegative(index))
+            if (detrendIndicatorManager.IsDetrendNegative(index))
             {
                 if (enableDebugLogging)
                 {

@@ -30,7 +30,6 @@ namespace CompIdxOverUnderDriver
         }
 
 
-
         public void PlotCustIndVolume(UserStrategyBase strategy, double overSoldLevel, double overBoughtLevel)
         {
             // Composite Indicator visuals
