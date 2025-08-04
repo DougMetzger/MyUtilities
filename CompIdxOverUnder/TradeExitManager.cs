@@ -24,6 +24,7 @@ namespace CompIdxOverUnderDriver
         private readonly Func<IEnumerable<Position>> getOpenPositions;
         private readonly Func<Position> getLastOpenPosition;
         private readonly Action<Position, OrderType, double, string> closePosition;
+        private readonly string logFilePath;
 
         private string message;
         bool stopLoss = false;
@@ -46,7 +47,8 @@ namespace CompIdxOverUnderDriver
             //          bool issueStopLoss,
             //          bool takeProfits,
             Func<IEnumerable<Position>> getOpenPositions,
-            Action<Position, OrderType, double, string> closePosition)
+            Action<Position, OrderType, double, string> closePosition,
+            string logFilePath)
 
         {
             this.bars = bars;
@@ -59,6 +61,7 @@ namespace CompIdxOverUnderDriver
             this.sellAtProfitPct = sellAtProfitPct;
             this.getOpenPositions = getOpenPositions;
             this.closePosition = closePosition;
+            this.logFilePath = logFilePath;
         }
 
         public void CloseTrades(int index)
@@ -75,21 +78,21 @@ namespace CompIdxOverUnderDriver
             // 1) Bearish divergence
             if (this.bearishDivergence)
             {
-                CloseAll("Sell Bearish Divergence", index, openPositions);
+                CloseAll("Sell Bearish Divergence", index, openPositions, bars);
                 return;
             }
 
             // 2) Cross under OverBought
             if (this.customCI.CrossesUnder(overBoughtLevel, index))
             {
-                CloseAll("Sold @ OverBought", index, openPositions);
+                CloseAll("Sold @ OverBought", index, openPositions, bars);
                 return;
             }
 
             // 3) Cross under OverSold
             if (this.customCI.CrossesUnder(overSoldLevel, index))
             {
-                CloseAll("Sold @ OverSold", index, openPositions);
+                CloseAll("Sold @ OverSold", index, openPositions, bars);
                 return;
 
             }
@@ -105,13 +108,14 @@ namespace CompIdxOverUnderDriver
             CheckForProfitTaking(bars, message, index, openPositions);
         }
 
-        private void CloseAll(string reason, int index, List<Position> openPositions)
+        private void CloseAll(string reason, int index, List<Position> openPositions, BarHistory bars)
         {
             foreach (var pos in openPositions)
             {
                 this.closePosition(pos, OrderType.Market, 0, reason);
+                LogClosedPosition(pos, reason, index, logFilePath, bars);
                 if (enableDebugLogging)
-                    WLLogger.Write($"#####################################Closed All Pos##################################### {reason}: {index + 1}");
+                    WLLogger.Write($"******************************** Closed: All ********************************* {reason}  @ symbol={bars.Symbol} | index={index + 1} | Date={bars.DateTimes[index].ToShortDateString()}");
             }
 
             if (enableDebugLogging)
@@ -139,10 +143,11 @@ namespace CompIdxOverUnderDriver
                 if (bars.Close[index] <= sellAtStopLoss)
                 {
                     this.closePosition(pos, OrderType.Market, 0, reason);
+                    LogClosedPosition(pos, reason, index, logFilePath, bars);
 
                     if (enableDebugLogging == true)
                     {
-                        WLLogger.Write("#####################################Closed Position because of Stop Loss#####################################");
+                        WLLogger.Write($"##################################### Closed: Stop Loss ##################################### | symbol={bars.Symbol} | index={index + 1} | Date={bars.DateTimes[index].ToShortDateString()}");
                     }
                 }
             }
@@ -160,10 +165,11 @@ namespace CompIdxOverUnderDriver
                 if (bars.Close[index] >= (pos.EntryPrice * sellAtProfit))
                 {
                     this.closePosition(pos, OrderType.Market, 0, reason);
+                    LogClosedPosition(pos, reason, index, logFilePath, bars);
 
                     if (enableDebugLogging == true)
                     {
-                        WLLogger.Write("#####################################Closed Position because Profit Target Reached:##################################### " + (index + 1));
+                        WLLogger.Write($"##################################### Closed: Profit Taking ##################################### | symbol={bars.Symbol} | index={index + 1} | Date={bars.DateTimes[index].ToShortDateString()}");
                     }
 
  //                   return;
@@ -171,6 +177,37 @@ namespace CompIdxOverUnderDriver
             }
 
         }
+        private void LogClosedPosition(Position pos, string reason, int index, string logFilePath, BarHistory bars)
+        {
+              string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+ //             string logFilePath = $@"C:\WealthLabLogs\TradeExitLog_{timestamp}.csv";
+
+            // Build CSV entry
+            string entryDate = bars.DateTimes[pos.EntryBar].ToShortDateString();
+  //              string entryDate = pos.EntryDate.ToShortDateString();
+            string exitDate = bars.DateTimes[index + 1].ToShortDateString();
+   //           string exitDate = pos.ExitDate.ToShortDateString();
+            double netProfit = (bars.Open[index + 1] - pos.EntryPrice) * pos.Quantity;  
+   //         double netProfit = (pos.ExitPrice - pos.EntryPrice) * pos.Quantity;  
+
+            string line = string.Join(",",
+                pos.Symbol,
+                $"EntryDate={entryDate}",
+                $"ExitDate={exitDate}",
+                $"EntryBar={pos.EntryBar}",
+                $"ExitBar={index + 1}",
+                $"EntryPrice={pos.EntryPrice:F2}",
+                $"ExitPrice={bars.Open[index + 1]:F2}",
+  //              $"ExitPrice={pos.ExitPrice:F2}",
+                $"Qty={pos.Quantity}",
+                $"Profit={netProfit:F2}",
+                $"Reason=\"{reason}\"",
+                $"Index={index + 1}"
+            );      
+            
+            File.AppendAllText(logFilePath, line + Environment.NewLine);
+        }
+
 
     }
 }

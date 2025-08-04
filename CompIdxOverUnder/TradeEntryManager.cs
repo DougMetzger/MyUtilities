@@ -114,8 +114,9 @@ namespace CompIdxOverUnderDriver
 
             if (enableDebugLogging)
             {
-                WLLogger.Write($"*********************************PlaceTrade:********************************* {reason} @ index {index}, symbol {bars.Symbol}");
+               
             }
+            WLLogger.Write($"******************************** Buy: PlaceTrade: ********************************* {reason}  @ symbol={bars.Symbol} | index={index} | Date={bars.DateTimes[index].ToShortDateString()}");
         }                                                                                      
          
     }

@@ -1,13 +1,18 @@
 ﻿//using CompIdxOverUnderDriver;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Metadata.Ecma335;
+using System.Text;
 using WealthLab.Backtest;
 using WealthLab.Core;
 using WealthLab.Indicators;
 using WealthLab.MyIndicators;
+using static CompIdxOverUnderDriver.CompIdxOUDriver;
+
 
 namespace CompIdxOverUnderDriver;
 
@@ -41,6 +46,9 @@ public class CompIdxOUDriver : UserStrategyBase
     private TradeExitManager exitManager;
     private IDetrendIndicatorProvider detrendIndicatorManager;
 
+    public static string LogOutcomesFilePath = @"C:\WealthLabLogs\SessionLog.csv";
+    private static Dictionary<string, List<string>> dataBySymbol = new();
+    private CsvLoader csvLoader;
 
     private TradeEntryManager entryMgr;
     private TradeExitManager exitMgr;
@@ -124,6 +132,14 @@ public class CompIdxOUDriver : UserStrategyBase
         {
             var loader = new PreferredValueLoader("vs 2022 v4", "2025 My Strategy Development", enableDebugLogging);
         }
+
+        string filePath = @"C:\WealthLabLogs\SessionLog_Win_Loss_Results_2025_08_04.csv";
+        csvLoader = new CsvLoader(); // Initialize the CSV loader
+
+        WriteToDebugLog("Loading file: " + filePath);
+        csvLoader.LoadFromFile(filePath, null);
+        
+        StrategySessionContext.InitializeLogger(); // Initialize logger for the session
     }
 
     public override void Initialize(BarHistory bars)
@@ -267,7 +283,7 @@ public class CompIdxOUDriver : UserStrategyBase
                                                         this,
                                                         detrendIndicatorManager);
 
-            // this.tradeEntryManager.Evaluate(idx);
+   //          this.tradeEntryManager.Evaluate(idx);
         
         } 
         
@@ -284,9 +300,10 @@ public class CompIdxOUDriver : UserStrategyBase
                                                    sellAtStopLossPct,
                                                    sellAtProfitPct,
                                                    () => OpenPositions,
-                                                   (pos, type, qty, reason) => ClosePosition(pos, type, qty, reason));
+                                                   (pos, type, qty, reason) => ClosePosition(pos, type, qty, reason),
+                                                   LogOutcomesFilePath);
 
-            //  this.exitManager.CloseTrades(idx);
+     //         this.exitManager.CloseTrades(idx);
         }
 
 //           ExecuteSessionOpen(bars, idx, bars.Open[idx]);
@@ -306,7 +323,70 @@ public class CompIdxOUDriver : UserStrategyBase
 
         
     }
-      
+
+    /*    public override void BacktestComplete()
+        {
+            WLLogger.Write("Backtest summary begins...");
+
+            foreach (Position pos in ClosedPositions)
+            {
+                double profit = pos.NetProfit;
+                string summary = $"{pos.Symbol}, Entry={pos.EntryPrice}, Exit={pos.ExitPrice}, Profit={profit}";
+                WLLogger.Write(summary);
+            }
+
+            WLLogger.Write("Backtest summary complete.");
+            WLLogger.Write($"AllPositions count: {AllPositions.Count}");
+            WLLogger.Write($"ClosedPositions count: {ClosedPositions?.Count ?? -1}");
+        }*/
+
+    /*   public override void BacktestComplete()
+       {
+           AuditClosedTrades(this.AllPositions); // or ClosedPositions if available
+       }
+
+       private void AuditClosedTrades(IList<Position> positions)
+       {
+           foreach (var pos in positions)
+           {
+               WLLogger.Write($"{pos.Symbol}: Profit={pos.NetProfit}");
+           }
+       }*/
+
+    /*   public override void BacktestComplete()
+       {
+           var allPositions = GetPositions();
+           foreach (var pos in allPositions)
+           {
+               WLLogger.Write($"{pos.Symbol}: Profit={pos.Profit}");
+           }
+       }*/
+
+ /*   public override void BacktestComplete()
+    {
+        List<string> symbols = GetSymbolsFromDataSet(); // Replace with actual source
+
+        foreach (string sym in symbols)
+        {
+            if (StrategyTrades.AllClosedTrades.TryGetValue(sym, out var trades))
+            {
+                WLLogger.Write($"--- Audit for {sym} ---");
+
+                foreach (var pos in trades)
+                {
+                    string date = BarsOfSymbol(sym).DateTimes[pos.ExitBar].ToShortDateString();
+                    WLLogger.Write($"{sym}: Profit={pos.NetProfit} on bar {pos.ExitBar} ({date})");
+                }
+            }
+            else
+            {
+                WLLogger.Write($"No trades found for {sym}");
+            }
+        }
+    }*/
+
+
+
 
     public interface IDetrendIndicatorProvider
     {
@@ -444,6 +524,55 @@ public class CompIdxOUDriver : UserStrategyBase
             PlotIndicator(sma200, WLColor.Black, PlotStyle.Line, false, "Price");
         }
     }
+
+    public static class StrategySessionContext
+    {
+        public static string Timestamp;
+ //       public static string LogFolderPath = @"C:\WealthLabLogs";
+       
+        public static void InitializeLogger()
+        {
+            Timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            LogOutcomesFilePath = Path.Combine(LogOutcomesFilePath, $"TradeExitLog_{Timestamp}.csv");
+
+            if (!Directory.Exists(LogOutcomesFilePath))
+                Directory.CreateDirectory(LogOutcomesFilePath);
+        }
+    }
+    public class CsvLoader
+    {       
+        public void LoadFromFile(string filePath, ILogger logger = null)
+        {          
+
+
+            if (!File.Exists(filePath))
+            {
+                logger?.LogError($"CSV file not found: {filePath}");
+                return;
+            }
+
+            foreach (var line in File.ReadLines(filePath))
+            {
+                var tokens = line.Split(',');
+                if (tokens.Length < 2) continue; // skip malformed rows
+
+                string symbol = tokens[0].Trim();
+                string value = tokens[1].Trim();
+
+                if (!dataBySymbol.ContainsKey(symbol))
+                    dataBySymbol[symbol] = new List<string>();
+
+                dataBySymbol[symbol].Add(value);
+            }
+
+            logger?.LogError($"Loaded {dataBySymbol.Count} symbols from {Path.GetFileName(filePath)}");
+        }
+
+        public List<string> GetDataForSymbol(string symbol) =>
+            dataBySymbol.TryGetValue(symbol, out var values) ? values : new List<string>();
+    }
+
+
 
 
 }
