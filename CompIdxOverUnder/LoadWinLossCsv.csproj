@@ -30,6 +30,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="MyDiagnostics">
+      <HintPath>..\..\..\..\..\..\Program Files\Quantacula, LLC\WealthLab 8\MyDiagnostics.dll</HintPath>
+    </Reference>
     <Reference Include="WealthLab.Core">
       <HintPath>C:\Program Files\Quantacula, LLC\WealthLab 8\WealthLab.Core.dll</HintPath>
     </Reference>

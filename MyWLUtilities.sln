@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36221.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CompIdxOverUnderDriver", "CompIdxOverUnder\CompIdxOverUnderDriver.csproj", "{60A19D49-8AE8-4F98-9634-B675A0BA2744}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LoadWinLossCsv", "CompIdxOverUnder\LoadWinLossCsv.csproj", "{60A19D49-8AE8-4F98-9634-B675A0BA2744}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
