@@ -17,25 +17,23 @@ namespace LoadWinLossCsv
 {
     public class LoadWinLossCsvDriver : UserStrategyBase
     {
-        public LoadWinLossCsvDriver()
+        public static string WinLossCsvFilePath = @"C:\MyWealthLab\CompIdxOU\WealthLabLogs\Inputs\SessionLog_Win_Loss_Results_2025_08_04.csv";
+        public static string ParameterFilePath  = @"C:\MyWealthLab\CompIdxOU\WealthLabLogs\Inputs\Parameters.csv";
+
+        private static bool printErrorLog = false;
+
+        public class StrategyParameters
         {
-            AddParameter("EvaluationMode", ParameterType.Int32, 0, 0, 2, 1);    //0    
+            public string Strategy { get; set; }
+            public string Parameter { get; set; }
+            public string Version { get; set; }
+            public int TotalTrades { get; set; }
+            public double WinPercent { get; set; }
+            public double Ratio { get; set; }
+            public double BlendedCalc { get; set; }
+            public string PrintErrorLog { get; set; }  
+            public string BypassWinLossCheck { get; set; }
         }
-
-        public static string WinLossCsvFilePath = @"C:\MyWealthLab\CompIdxOU\WealthLabLogs\SessionLog_Win_Loss_Results_2025_08_04.csv";
-       
-        private int evaluationMode = 0;
-
-        public enum EvaluationMode
-        {
-            Conservative,
-            Moderate,
-            Aggressive,
-            //          SymbolSpecific,
-            //         CustomThreshold
-        }
-
-        private EvaluationMode mode;
 
         public class WinLossSummary
         {
@@ -48,15 +46,24 @@ namespace LoadWinLossCsv
         public class TradeEvaluationResult
         {
             public string Symbol { get; set; }
-            public EvaluationMode EvaluationMode { get; set; }
             public bool ShouldTrade { get; set; }
             public WinLossSummary Summary { get; set; }
         }
 
+        public override void Execute(BarHistory bars, int idx)
+        {
+            if (printErrorLog)
+            {
+                WriteToDebugLog($"LoadWinLossCsvDriver:Execute");
+            }                    
+        }            
 
         public static List<WinLossSummary> LoadSummaries()
         {
-            LogBuffer.Write($"[Nav] Entered Load Summaries");
+            if (printErrorLog)
+            {
+                LogBuffer.Write($"Entered Load Summaries");
+            }
 
             var summaries = new List<WinLossSummary>();
 
@@ -67,8 +74,8 @@ namespace LoadWinLossCsv
             {
                 var fields = line.Split(',');
 
-                if (fields.Length < 9)
-                    continue; // skip malformed rows
+    //            if (fields.Length < 9)
+     //               continue; // skip malformed rows
 
                 var summary = new WinLossSummary
                 {
@@ -78,7 +85,7 @@ namespace LoadWinLossCsv
                     WinLossAmtRatio = double.TryParse(fields[8], out double amtRatio) ? amtRatio : 0.0
                 };
 
-                Debug.WriteLine($"[Load Win/Loss Data] Symbol={fields[0]}, TradeCount={trades},  WinPct={winPct}, AmtRation={amtRatio}");
+                Debug.WriteLine($"[Load Win/Loss Data] Symbol={summary.Symbol}, TradeCount={summary.WinPercent},  WinPct={summary.WinPercent}, AmtRatio={summary.WinLossAmtRatio}");
 
                 summaries.Add(summary);
             }
@@ -86,126 +93,137 @@ namespace LoadWinLossCsv
             return summaries;
         }
 
-        public override void Execute(BarHistory bars, int idx)
+        public static StrategyParameters LoadStrategyParameters(string filePath)
         {
-            LogBuffer.Write($"[Nav] Entered Execute");
+    //        if (printErrorLog)
+     //       {
+                LogBuffer.Write($"[Read LoadStrategyParameter] from: '{filePath}'.");
+   //         }
+               
+            if (!File.Exists(filePath))
+                throw new FileNotFoundException($"Parameter file not found: {filePath}");
 
-            if (bars.Count < 2) // Arbitrary gate to ensure it's done once
+            var lines = File.ReadLines(filePath).Skip(1).FirstOrDefault(); // Skip header
+            if (lines == null)
+                throw new InvalidDataException("Parameter file is empty or malformed.");
+
+            var fields = lines.Split(',');
+  //          if (fields.Length < 6)
+   //             throw new InvalidDataException("Parameter file does not contain expected fields.");
+
+            return new StrategyParameters
             {
-                LoadParametersOnce();
-            }
-
-            WriteToDebugLog($"LoadWinLossCsvDriver:Execute");
-
-            var summary = LoadWinLossCsvDriver.GetSummary(bars.Symbol);
-
-            var evalResult = LoadWinLossCsvDriver.ShouldExecuteTrade(bars.Symbol, mode);
-
-            Debug.WriteLine($"[Trade Evaluation] Symbol={evalResult.Symbol}, Mode={evalResult.EvaluationMode},  Result={evalResult.ShouldTrade}, Reason={evalResult.Summary}");
-
-
-            if (!evalResult.ShouldTrade)
-            {
-                return;
-            }
-
+                Strategy = fields[0],
+                Parameter = fields[1],
+                Version = fields[2],
+                TotalTrades = int.Parse(fields[3]),
+                WinPercent = double.Parse(fields[4]),
+                Ratio = double.Parse(fields[5]),
+                BlendedCalc = double.Parse(fields[6]),
+                PrintErrorLog = fields[7],
+                BypassWinLossCheck = fields[8]
+            };
         }
-
-        private void LoadParametersOnce()
-        {
-            LogBuffer.Write($"[Nav] Entered LoadParametersOnce");
-            evaluationMode = Parameters[0].AsInt;
-
-            mode = (EvaluationMode)evaluationMode;
-        }
+           
 
         public static WinLossSummary GetSummary(string symbol)
         {
-            LogBuffer.Write($"[Nav] Entered Get Summary");
+            if (printErrorLog)
+            {
+                LogBuffer.Write($"Entered Get Summary for Symbol: '{symbol}'");
+            }
 
             var summary = LoadSummaries().FirstOrDefault(s =>
                 s.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase));
-
-            if (summary == null)
-            {
-                Debug.WriteLine($"[LoadWinLossCsvDriver] CSV entry not found for symbol '{symbol}'.");
-                // Optionally create a default summary object with 0 trades
+                       
+            {                
                 return new WinLossSummary
                 {
-                    Symbol = symbol,
-                    TotalTrades = 0,
-                    WinPercent = 0.0,
-                    WinLossAmtRatio = 0.0
+                    Symbol = summary.Symbol,
+                    TotalTrades = summary.TotalTrades,
+                    WinPercent = summary.WinPercent,
+                    WinLossAmtRatio = summary.WinLossAmtRatio
+                };
+            }   
+                        
+        }
+
+        public static TradeEvaluationResult ShouldExecuteTrade(string symbol)
+        {
+ 
+            var parameters = LoadStrategyParameters(ParameterFilePath);
+
+            printErrorLog = false;
+
+            if (parameters.PrintErrorLog == "t")
+            {
+                printErrorLog = true;
+                LogBuffer.Write($"Entered ShouldExecuteTrade Symbol: '{symbol}'");
+                LogBuffer.Write($"Parameters: TotalTrades '{parameters.TotalTrades}' WinPercent '{parameters.WinPercent}' WinLossAmtRatio '{parameters.Ratio}' BlendedCalc '{parameters.BlendedCalc}'.");
+            }
+
+            if (parameters.BypassWinLossCheck == "t")
+            {
+                if (printErrorLog)
+                {
+                    LogBuffer.Write($"Bypassing Win/Loss Check for Symbol: '{symbol}'");
+                }
+
+                return new TradeEvaluationResult
+                {
+      //              Symbol = symbol,
+                    ShouldTrade = true,  //Bypass Win/Loss Check and always return true 
                 };
             }
 
-            return summary;
-        }
+            var summary = GetSummary(symbol);
 
-        public static TradeEvaluationResult ShouldExecuteTrade(string symbol, EvaluationMode mode)
-        {
-            LogBuffer.Write($"[Nav] Entered ShouldExecuteTrade for symbol '{symbol}', mode '{mode}'.");
+            double blendedCalc = (summary.WinPercent) * (summary.WinLossAmtRatio);
+            blendedCalc = Math.Round(blendedCalc, 2);
 
-            var summary = GetSummary(symbol); // Reads CSV internally each time
-            bool shouldTrade = false;
-            mode = EvaluationMode.Conservative;
-
-
-            switch (mode)
+            if (printErrorLog)
             {
-                case EvaluationMode.Conservative:
-                    shouldTrade = summary.TotalTrades >= 2 &&
-                                  summary.WinPercent >= .55 &&
-                                  summary.WinLossAmtRatio >= 3;
-                    LogBuffer.Write($"[Should Execute Traded] for  symbol '{symbol}', mode '{mode}'.");
-                    LogBuffer.Write($"[Criteria:] mode {EvaluationMode.Conservative}, tt '{summary.TotalTrades}', wp '{summary.WinPercent}', ratio '{summary.WinLossAmtRatio}'.");
-                    break;
-
-                case EvaluationMode.Moderate:
-                    shouldTrade = summary.TotalTrades >= 2 &&
-                                  summary.WinPercent >= .45 &&
-                                  summary.WinLossAmtRatio >= 2.5;
-                    LogBuffer.Write($"[Should Execute Traded] for  symbol '{symbol}', mode '{mode}'.");
-                    LogBuffer.Write($"[Criteria:] mode {EvaluationMode.Moderate}, tt '{summary.TotalTrades}', wp '{summary.WinPercent}', ratio '{summary.WinLossAmtRatio}'.");
-                    break;
-
-                case EvaluationMode.Aggressive:
-                    shouldTrade = summary.TotalTrades >= 0 &&
-                                  summary.WinPercent >= .0;
-                    LogBuffer.Write($"[Should Execute Traded] for  symbol '{symbol}', mode '{mode}'.");
-                    LogBuffer.Write($"[Criteria:] mode {EvaluationMode.Aggressive}, tt '{summary.TotalTrades}', wp '{summary.WinPercent}', ratio '{summary.WinLossAmtRatio}'.");
-
-                    break;
-
-                default:
-                    Debug.WriteLine($"Unknown EvaluationMode: {mode}");
-                    break;
+                LogBuffer.Write($"Get Results: TotalTrades '{summary.TotalTrades}' WinPercent ' {summary.WinPercent}' WinLossAmtRatio '{summary.WinLossAmtRatio}' BlendedCalc '{blendedCalc}'.");
             }
+
+            bool shouldTrade = summary.TotalTrades >= parameters.TotalTrades &&
+                                       blendedCalc >= parameters.BlendedCalc;
+                 //              summary.WinPercent >= parameters.WinPercent &&
+                 //              summary.WinLossAmtRatio >= parameters.Ratio;
+                             if (printErrorLog)
+            {
+                LogBuffer.Write($"Should Trade: '{shouldTrade}'");
+            }                      
 
             return new TradeEvaluationResult
             {
-                Symbol = symbol,
-                EvaluationMode = mode,
+ //               Symbol = symbol,
                 ShouldTrade = shouldTrade,
-                Summary = summary
+ //               Summary = summary
             };
         }
 
-
         public void RunCsvImport(string csvPath)
         {
-            LogBuffer.Write($"[Nav] Entered RunCsvImport");
+            if (printErrorLog)
+            {
+                LogBuffer.Write($"Entered RunCsvImport");
+            }
 
-            CsvLoader.LoadCsv(csvPath);  // ✅ This is the integration point
+            CsvLoader.LoadCsv(csvPath, printErrorLog);  // ✅ This is the integration point
         }
     }
 
     public class CsvLoader
     {
-        public static void LoadCsv(string filePath)
+        public static void LoadCsv(string filePath, bool printErrorLog)
         {
-            LogBuffer.Write($"[Nav] Entered LoadCsvy");
 
+            if (printErrorLog)
+            {
+                LogBuffer.Write($"Entered LoadCsv");
+            }
+             
             // ✅ This is where logging works—inside a method block
             LogBuffer.Write($"[CSV] Starting load from '{filePath}'.");
 
