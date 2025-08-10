@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using MyDiagnostics.Logging;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -10,7 +11,7 @@ using WealthLab.Backtest;
 using WealthLab.Core;
 using WealthLab.Indicators;
 using WealthLab.MyIndicators;
-using MyDiagnostics.Logging;
+using static LoadWinLossCsv.LoadWinLossCsvDriver;
 
 
 namespace LoadWinLossCsv
@@ -21,6 +22,9 @@ namespace LoadWinLossCsv
         public static string ParameterFilePath  = @"C:\MyWealthLab\CompIdxOU\WealthLabLogs\Inputs\Parameters.csv";
 
         private static bool printErrorLog = false;
+
+        private static Dictionary<string, WinLossSummary> _summaryCache;
+        private static readonly object _cacheLock = new();
 
         public class StrategyParameters
         {
@@ -124,19 +128,12 @@ namespace LoadWinLossCsv
                 BypassWinLossCheck = fields[8]
             };
         }
-           
-
         public static WinLossSummary GetSummary(string symbol)
         {
-            if (printErrorLog)
-            {
-                LogBuffer.Write($"Entered Get Summary for Symbol: '{symbol}'");
-            }
+            InitializeSummaryCache();
 
-            var summary = LoadSummaries().FirstOrDefault(s =>
-                s.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase));
-                       
-            {                
+            if (_summaryCache.TryGetValue(symbol, out var summary))
+            {
                 return new WinLossSummary
                 {
                     Symbol = summary.Symbol,
@@ -144,9 +141,69 @@ namespace LoadWinLossCsv
                     WinPercent = summary.WinPercent,
                     WinLossAmtRatio = summary.WinLossAmtRatio
                 };
-            }   
-                        
+            }
+
+            return new WinLossSummary
+            {
+                Symbol = symbol,
+                TotalTrades = 0,
+                WinPercent = 0.0,
+                WinLossAmtRatio = 0.0
+            };
         }
+
+        public static void InitializeSummaryCache()
+        {
+            lock (_cacheLock)
+            {
+                if (_summaryCache != null) return; // already loaded
+
+                _summaryCache = new Dictionary<string, WinLossSummary>(StringComparer.OrdinalIgnoreCase);
+
+                if (!File.Exists(WinLossCsvFilePath))
+                    return;
+
+                foreach (var line in File.ReadLines(WinLossCsvFilePath).Skip(1))
+                {
+                    var fields = line.Split(',');
+
+                    var summary = new WinLossSummary
+                    {
+                        Symbol = fields[0],
+                        TotalTrades = int.TryParse(fields[3], out int trades) ? trades : 0,
+                        WinPercent = double.TryParse(fields[4], out double winPct) ? winPct : 0.0,
+                        WinLossAmtRatio = double.TryParse(fields[8], out double amtRatio) ? amtRatio : 0.0
+                    };
+
+                    _summaryCache[summary.Symbol] = summary;
+                }
+
+                if (printErrorLog)
+                    LogBuffer.Write($"[Cache] Loaded {_summaryCache.Count} summaries into cache.");
+            }
+        }
+
+        /*        public static WinLossSummary GetSummary(string symbol)
+                {
+                    if (printErrorLog)
+                    {
+                        LogBuffer.Write($"Entered Get Summary for Symbol: '{symbol}'");
+                    }
+
+                    var summary = LoadSummaries().FirstOrDefault(s =>
+                        s.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase));
+
+                    {                
+                        return new WinLossSummary
+                        {
+                            Symbol = summary.Symbol,
+                            TotalTrades = summary.TotalTrades,
+                            WinPercent = summary.WinPercent,
+                            WinLossAmtRatio = summary.WinLossAmtRatio
+                        };
+                    }   
+
+                }*/
 
         public static TradeEvaluationResult ShouldExecuteTrade(string symbol)
         {
@@ -243,8 +300,7 @@ namespace LoadWinLossCsv
                 throw;
             }
         }
-    }
-
+    }      
 }
 
 
