@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using MyDiagnostics.Logging;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
@@ -62,65 +63,48 @@ namespace LoadWinLossCsv
             public WinLossSummary Summary { get; set; }
         }
 
+        public static void InitializeNewSubmissions()
+
+        { 
+            ClearParameterCache();
+            _cachedParameters = LoadStrategyParameters(ParameterFilePath);
+              
+            ClearSummaryCache();
+            InitializeSummaryCache();
+
+            _summaryInitialized = false;
+            _parametersInitialized = false; // Optional: reset flag if needed
+
+            printErrorLog = false;
+            if (_cachedParameters.PrintErrorLog == "t")
+            {
+                printErrorLog = true;               
+                LogBuffer.Write($"InintializeNewSubmission:  Cache cleared and PrintErrorLog set to true.");
+            }
+        }
+
         public override void Execute(BarHistory bars, int idx)
         {
             if (printErrorLog)
             {
                 WriteToDebugLog($"LoadWinLossCsvDriver:Execute");
             }
-        }
-
-        /*       public static List<WinLossSummary> LoadSummaries()
-               {
-                   if (printErrorLog)
-                   {
-                       LogBuffer.Write($"Entered Load Summaries");
-                   }
-
-                   var summaries = new List<WinLossSummary>();
-
-                   if (!File.Exists(WinLossCsvFilePath))
-                       return summaries;
-
-                   foreach (var line in File.ReadLines(WinLossCsvFilePath).Skip(1)) // skip header
-                   {
-                       var fields = line.Split(',');
-
-                       //            if (fields.Length < 9)
-                       //               continue; // skip malformed rows
-
-                       var summary = new WinLossSummary
-                       {
-                           Symbol = fields[0],
-                           TotalTrades = int.TryParse(fields[3], out int trades) ? trades : 0,
-                           WinPercent = double.TryParse(fields[4], out double winPct) ? winPct : 0.0,
-                           WinLossAmtRatio = double.TryParse(fields[8], out double amtRatio) ? amtRatio : 0.0
-                       };
-
-                       Debug.WriteLine($"[Load Win/Loss Data] Symbol={summary.Symbol}, TradeCount={summary.WinPercent},  WinPct={summary.WinPercent}, AmtRatio={summary.WinLossAmtRatio}");
-
-                       summaries.Add(summary);
-                   }
-
-                   return summaries;
-               }*/
+        }       
 
         public static TradeEvaluationResult ShouldExecuteTrade(string symbol)
-        {
-            InitializeParameters(ParameterFilePath);
-            EnsureSummaryCacheInitialized();                     
-            
-            var parameters = LoadStrategyParameters(ParameterFilePath);
-
-            printErrorLog = false;
-
-            if (parameters.PrintErrorLog == "t")
+        {            
+            if (_cachedParameters == null)
             {
-                printErrorLog = true;
+                _cachedParameters = LoadStrategyParameters(ParameterFilePath); // fallback if not initialized
+            }
+
+            var parameters = _cachedParameters;  // ✅ Use cached version                    
+
+            if (printErrorLog)
+            {                
                 LogBuffer.Write($"Entered ShouldExecuteTrade Symbol: '{symbol}'");
                 LogBuffer.Write($"Parameters: TotalTrades '{parameters.TotalTrades}' WinPercent '{parameters.WinPercent}' WinLossAmtRatio '{parameters.Ratio}' BlendedCalc '{parameters.BlendedCalc}'.");
             }
-
             if (parameters.BypassWinLossCheck == "t")
             {
                 if (printErrorLog)
@@ -131,8 +115,12 @@ namespace LoadWinLossCsv
                 return new TradeEvaluationResult
                 {
                     ShouldTrade = true,  //Bypass Win/Loss Check and always return true 
-                };
-                                
+                };                                
+            }
+
+          if (_summaryCache == null || !_summaryCache.ContainsKey(symbol))
+            {
+                InitializeSummaryCache();
             }
 
             var summary = GetSummary(symbol);
@@ -161,37 +149,19 @@ namespace LoadWinLossCsv
             };
         }
 
-        /*       public static StrategyParameters LoadStrategyParameters(string filePath)
-               {
-                   //        if (printErrorLog)
-                   //       {
-                   LogBuffer.Write($"[Read LoadStrategyParameter] from: '{filePath}'.");
-                   //         }
+        public static void ClearParameterCache()
+        {
+            lock (_parameterLock)
+            {
+                _cachedParameters = null;
+                _parametersInitialized = false; // Optional: reset flag if needed
 
-                   if (!File.Exists(filePath))
-                       throw new FileNotFoundException($"Parameter file not found: {filePath}");
-
-                   var lines = File.ReadLines(filePath).Skip(1).FirstOrDefault(); // Skip header
-                   if (lines == null)
-                       throw new InvalidDataException("Parameter file is empty or malformed.");
-
-                   var fields = lines.Split(',');
-                   //          if (fields.Length < 6)
-                   //             throw new InvalidDataException("Parameter file does not contain expected fields.");
-
-                   return new StrategyParameters
-                   {
-                       Strategy = fields[0],
-                       Parameter = fields[1],
-                       Version = fields[2],
-                       TotalTrades = int.Parse(fields[3]),
-                       WinPercent = double.Parse(fields[4]),
-                       Ratio = double.Parse(fields[5]),
-                       BlendedCalc = double.Parse(fields[6]),
-                       PrintErrorLog = fields[7],
-                       BypassWinLossCheck = fields[8]
-                   };
-               }*/
+                if (printErrorLog)
+                {
+                    LogBuffer.Write("[Cache] StrategyParameters cache cleared.");
+                }
+            }
+        }
 
         public static StrategyParameters LoadStrategyParameters(string filePath)
         {
@@ -200,7 +170,10 @@ namespace LoadWinLossCsv
                 if (_cachedParameters != null)
                     return _cachedParameters;
 
-                LogBuffer.Write($"[Read LoadStrategyParameter] from: '{filePath}'.");
+                if (printErrorLog)
+                {
+                    LogBuffer.Write($"[Read LoadStrategyParameter] from: '{filePath}'.");
+                }
 
                 if (!File.Exists(filePath))
                     throw new FileNotFoundException($"Parameter file not found: {filePath}");
@@ -227,34 +200,9 @@ namespace LoadWinLossCsv
                 return _cachedParameters;
             }
         }
-
-        public static void InitializeParameters(string filePath)
-        {
-            if (_parametersInitialized) return;
-
-  //          ClearParameterCache(); // Clear stale or previous session data
-            LoadStrategyParameters(filePath); // Triggers caching
-            _parametersInitialized = true;
-
-            if (printErrorLog)
-                LogBuffer.Write("[Init] StrategyParameters initialized.");
-        }
-
-        public static void ClearParameterCache()
-        {
-            lock (_parameterLock)
-            {
-                _cachedParameters = null;
-   //             _parametersInitialized = false; // Optional: reset flag if needed
-                LogBuffer.Write("[Cache] StrategyParameters cache cleared.");
-            }
-        }
-
-
+         
         public static WinLossSummary GetSummary(string symbol)
         {
-  //          InitializeSummaryCache();
-
             if (_summaryCache.TryGetValue(symbol, out var summary))
             {
                 return new WinLossSummary
@@ -274,46 +222,18 @@ namespace LoadWinLossCsv
                 WinLossAmtRatio = 0.0
             };
         }
-
-        /*       public static void InitializeSummaryCache()
-               {
-                   lock (_cacheLock)
-                   {
-                       if (_summaryCache != null) return; // already loaded
-
-                       _summaryCache = new Dictionary<string, WinLossSummary>(StringComparer.OrdinalIgnoreCase);
-
-                       if (!File.Exists(WinLossCsvFilePath))
-                           return;
-
-                       foreach (var line in File.ReadLines(WinLossCsvFilePath).Skip(1))
-                       {
-                           var fields = line.Split(',');
-
-                           var summary = new WinLossSummary
-                           {
-                               Symbol = fields[0],
-                               TotalTrades = int.TryParse(fields[3], out int trades) ? trades : 0,
-                               WinPercent = double.TryParse(fields[4], out double winPct) ? winPct : 0.0,
-                               WinLossAmtRatio = double.TryParse(fields[8], out double amtRatio) ? amtRatio : 0.0
-                           };
-
-                           _summaryCache[summary.Symbol] = summary;
-                       }
-
-                       if (printErrorLog)
-                           LogBuffer.Write($"[Cache] Loaded {_summaryCache.Count} summaries into cache.");
-                   }
-               } */
-
-        public static void EnsureSummaryCacheInitialized()
+    
+        public static void ClearSummaryCache()
         {
-            if (_summaryInitialized) return;
+            lock (_cacheLock)
+            {
+                _summaryCache = null;
+                //          _summaryInitialized = false;
 
-  //          ClearSummaryCache();
-            InitializeSummaryCache();
+                if (printErrorLog)
+                    LogBuffer.Write("[Cache] Summary cache cleared.");
+            }
         }
-
 
         public static void InitializeSummaryCache()
         {
@@ -346,26 +266,6 @@ namespace LoadWinLossCsv
                 if (printErrorLog)
                     LogBuffer.Write($"[Cache] Loaded {_summaryCache.Count} summaries into cache.");
             }
-        }
-
-        public static void ClearSummaryCache()
-        {
-            lock (_cacheLock)
-            {
-                _summaryCache = null;
-      //          _summaryInitialized = false;
-
-                if (printErrorLog)
-                    LogBuffer.Write("[Cache] Summary cache cleared.");
-            }
-        }
-
-        public static void NotifyNewSubmission()
-        {
-            ClearParameterCache();
-            ClearSummaryCache();
-            _summaryInitialized = false;
-            _parametersInitialized = false; // Optional: reset flag if needed
         }
     }
 }
