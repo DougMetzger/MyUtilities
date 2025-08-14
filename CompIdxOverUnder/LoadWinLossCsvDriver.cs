@@ -15,7 +15,6 @@ using WealthLab.Indicators;
 using WealthLab.MyIndicators;
 using static LoadWinLossCsv.LoadWinLossCsvDriver;
 
-
 namespace LoadWinLossCsv
 {
     public class LoadWinLossCsvDriver : UserStrategyBase
