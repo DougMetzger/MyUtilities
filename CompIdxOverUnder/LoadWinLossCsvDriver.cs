@@ -63,7 +63,7 @@ namespace LoadWinLossCsv
         }
 
         public static void InitializeNewSubmissions()
-
+//
         { 
             ClearParameterCache();
             _cachedParameters = LoadStrategyParameters(ParameterFilePath);
