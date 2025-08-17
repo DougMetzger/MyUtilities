@@ -19,7 +19,7 @@ namespace LoadWinLossCsv
 {
     public class LoadWinLossCsvDriver : UserStrategyBase
     {
-        public static string WinLossCsvFilePath = @"C:\MyWealthLab\CompIdxOU\WealthLabLogs\Inputs\SessionLog_Win_Loss_Results_2025_08_04.csv";
+        public static string WinLossCsvFilePath = @"C:\MyWealthLab\CompIdxOU\WealthLabLogs\Inputs\WinnLossSummaries\ConsolidatedWinLosses.csv";
         public static string ParameterFilePath = @"C:\MyWealthLab\CompIdxOU\WealthLabLogs\Inputs\LoadWinLossCsvParameters.csv";
 
         private static bool printErrorLog = false;
@@ -254,7 +254,7 @@ namespace LoadWinLossCsv
                         Symbol = fields[0],
                         TotalTrades = int.TryParse(fields[3], out int trades) ? trades : 0,
                         WinPercent = double.TryParse(fields[4], out double winPct) ? winPct : 0.0,
-                        WinLossAmtRatio = double.TryParse(fields[8], out double amtRatio) ? amtRatio : 0.0
+                        WinLossAmtRatio = double.TryParse(fields[9], out double amtRatio) ? amtRatio : 0.0
                     };
 
                     _summaryCache[summary.Symbol] = summary;
