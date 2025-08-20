@@ -31,7 +31,6 @@ namespace LoadWinLossCsv
 
         private static Dictionary<string, WinLossSummary> _summaryCache;
         private static readonly object _cacheLock = new();
-
         private static bool _summaryInitialized = false;
 
         public class StrategyParameters
@@ -71,8 +70,8 @@ namespace LoadWinLossCsv
             ClearSummaryCache();
             InitializeSummaryCache();
 
-            _summaryInitialized = false;
-            _parametersInitialized = false; // Optional: reset flag if needed
+   //         _summaryInitialized = true;
+  //          _parametersInitialized = true; // Optional: reset flag if needed
 
             printErrorLog = false;
             if (_cachedParameters.PrintErrorLog == "t")
@@ -110,7 +109,6 @@ namespace LoadWinLossCsv
                 {
                     LogBuffer.Write($"Bypassing Win/Loss Check for Symbol: '{symbol}'");
                 }
-
                 return new TradeEvaluationResult
                 {
                     ShouldTrade = true,  //Bypass Win/Loss Check and always return true 
@@ -119,6 +117,8 @@ namespace LoadWinLossCsv
 
           if (_summaryCache == null || !_summaryCache.ContainsKey(symbol))
             {
+
+                LogBuffer.Write($"***************************** TradeEvaluationResult ShouldExecuteTrade for Symbol: '{symbol}' Do not want to be here ****************************");
                 InitializeSummaryCache();
             }
 
@@ -227,7 +227,7 @@ namespace LoadWinLossCsv
             lock (_cacheLock)
             {
                 _summaryCache = null;
-                //          _summaryInitialized = false;
+                _summaryInitialized = false;
 
                 if (printErrorLog)
                     LogBuffer.Write("[Cache] Summary cache cleared.");
